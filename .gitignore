@@ -46,3 +46,6 @@ next-env.d.ts
 # local project plan is private and must never be committed
 PROJECT_PLAN.md
 docs/PROJECT_PLAN.md
+
+# local UI verification screenshots (sent to the reviewer, never committed)
+.shots/

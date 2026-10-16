@@ -1,0 +1,49 @@
+/* Design tokens: colors. Source: First 90 Days design system (tokens/colors.css). */
+:root{
+/* Base palette */
+--ivory-50:#FCFBF8;--ivory-100:#F7F6F1;--ivory-200:#EFEDE4;
+--stone-100:#EBE8DE;--stone-200:#DDD9CC;--stone-300:#C7C2B2;--stone-500:#858170;--stone-600:#66645A;--stone-700:#4A4A42;
+--ink-900:#203431;--ink-800:#2D423F;--ink-700:#455A56;
+--evergreen-50:#EAF3F0;--evergreen-100:#D3E6E0;--evergreen-200:#A9CCC3;--evergreen-500:#2E7064;--evergreen-600:#25594F;--evergreen-700:#1D4740;
+--apricot-50:#FCF1E9;--apricot-100:#F8E0CF;--apricot-300:#E8AE89;--apricot-500:#C97F4F;--apricot-700:#8A4B22;
+--clay-50:#F9E8E4;--clay-200:#E7B5AA;--clay-500:#A8402F;--clay-600:#8C3324;
+--white:#FFFFFF;
+
+/* Semantic roles - surfaces */
+--bg-page:var(--ivory-100);
+--bg-surface:var(--ivory-50);
+--bg-raised:var(--white);
+--bg-sunken:var(--stone-100);
+--bg-inverse:var(--ink-900);
+--bg-action:var(--evergreen-500);
+--bg-action-hover:var(--evergreen-600);
+--bg-action-pressed:var(--evergreen-700);
+--bg-action-subtle:var(--evergreen-50);
+--bg-warm:var(--apricot-300);
+--bg-warm-subtle:var(--apricot-50);
+--bg-danger:var(--clay-500);
+--bg-danger-hover:var(--clay-600);
+--bg-danger-subtle:var(--clay-50);
+--bg-overlay:rgba(32,52,49,.46);
+
+/* Text */
+--text-primary:var(--ink-900);
+--text-secondary:var(--ink-700);
+--text-muted:var(--stone-600);
+--text-on-action:var(--white);
+--text-on-inverse:var(--ivory-100);
+--text-link:var(--evergreen-600);
+--text-action:var(--evergreen-700);
+--text-warm:var(--apricot-700);
+--text-danger:var(--clay-500);
+
+/* Borders & focus */
+--border-subtle:var(--stone-200);
+--border-default:var(--stone-300);
+--border-control:var(--stone-500);
+--border-action:var(--evergreen-500);
+--border-action-subtle:var(--evergreen-200);
+--border-warm:var(--apricot-300);
+--border-danger:var(--clay-500);
+--focus-color:var(--evergreen-500);
+}

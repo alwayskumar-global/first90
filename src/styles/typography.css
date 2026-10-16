@@ -1,0 +1,13 @@
+/* Design tokens: typography. Source: First 90 Days design system (tokens/typography.css).
+   Font families come from next/font (see src/app/layout.tsx), which provides --font-dm-sans and --font-newsreader. */
+:root{
+--font-sans:var(--font-dm-sans),'DM Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+--font-serif:var(--font-newsreader),'Newsreader','Iowan Old Style','Palatino Linotype',Georgia,serif;
+--fw-regular:400;--fw-medium:500;--fw-semibold:600;--fw-bold:700;
+--fs-12:.75rem;--fs-13:.8125rem;--fs-14:.875rem;--fs-15:.9375rem;--fs-16:1rem;--fs-18:1.125rem;--fs-20:1.25rem;--fs-24:1.5rem;--fs-28:1.75rem;--fs-34:2.125rem;--fs-44:2.75rem;--fs-56:3.5rem;
+--lh-tight:1.1;--lh-snug:1.25;--lh-normal:1.5;--lh-relaxed:1.6;
+--ls-tight:-.02em;--ls-normal:0;--ls-caps:.08em;
+}
+body{background:var(--bg-page);color:var(--text-primary);font-family:var(--font-sans);font-size:var(--fs-16);line-height:var(--lh-normal);-webkit-font-smoothing:antialiased;margin:0}
+a{color:var(--text-link);text-underline-offset:3px}
+a:hover{color:var(--evergreen-700)}
