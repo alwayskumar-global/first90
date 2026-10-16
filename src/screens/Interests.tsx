@@ -10,6 +10,7 @@ import { ApiError, resolveInterestRequest } from "@/lib/flow/api";
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, type InterestOutcome } from "@/lib/flow/labels";
 import { MAX_ANCHORS } from "@/lib/flow/state";
+import { unsearchedNote } from "@/lib/flow/summary";
 import type { Anchor } from "@/lib/flow/types";
 
 const EXAMPLES: { label: string; make: () => Anchor }[] = [
@@ -40,6 +41,7 @@ export function Interests() {
   const [result, setResult] = useState<LookupResult | null>(null);
   const anchors = state.anchors;
   const full = anchors.length >= MAX_ANCHORS;
+  const unsearched = unsearchedNote(anchors);
   const q = query.trim();
 
   // Look the text up (debounced) as the user types. Aliases and preferences resolve without calling Qloo.
@@ -235,6 +237,12 @@ export function Interests() {
                     Nothing added yet. Search above, or start with an example below.
                   </div>
                 )}
+                {unsearched ? (
+                  <p role="note" style={{ margin: "14px 0 0", display: "flex", alignItems: "flex-start", gap: 8, font: "400 14px/1.5 var(--font-sans)", color: "var(--text-secondary)" }}>
+                    <span style={{ flex: "none", marginTop: 2, display: "inline-flex", color: "var(--apricot-700)" }}><Icon name="info" size={16} /></span>
+                    <span>{unsearched}</span>
+                  </p>
+                ) : null}
                 {under ? (
                   <div style={{ marginTop: 16 }}>
                     <StateBanner tone="partial" icon="circle-alert" title="A few more will help">

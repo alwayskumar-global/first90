@@ -4,9 +4,9 @@ import { allItems, findItem, setSaved } from "@/domain/session";
 import { buildPlan } from "@/lib/agent/workflow";
 import { ApiError, readNdjson } from "@/lib/flow/api";
 import { buildTasteInput, selectCategories } from "@/lib/flow/input";
-import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, tagKindLabel } from "@/lib/flow/labels";
+import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, tagKindLabel, unsearchedAnchors } from "@/lib/flow/labels";
 import { flowReducer, initialState, MAX_ANCHORS, sampleAnchors } from "@/lib/flow/state";
-import { areaText, choicesText, rangeText } from "@/lib/flow/summary";
+import { areaText, choicesText, rangeText, ROUTINE_CARDS, unsearchedNote, unsearchedShort } from "@/lib/flow/summary";
 import type { FlowState } from "@/lib/flow/types";
 import { BASE_INPUT, fakeClient, largeRaw } from "./helpers";
 
@@ -200,5 +200,40 @@ describe("ambiguous choices the user can tell apart", () => {
     const dupes = { status: "ambiguous" as const, input: "x", matches: [tag("urn:tag:mystery:a"), tag("urn:tag:mystery:b")] };
     const outcome = outcomeFromResolved(dupes);
     expect(outcome.status).toBe("single");
+  });
+});
+
+describe("interests the demo cannot search (CR-008)", () => {
+  const japanese = anchorFromMatch("Japanese Food", { kind: "tag", id: "urn:tag:genre:place:restaurant:japanese_food", name: "Japanese Food", source: "qloo" }, "confirmed");
+  const korean = sampleAnchors().find((a) => a.input === "Korean food")!;
+  const author = anchorFromMatch("Haruki Murakami", { kind: "entity", id: "00000000-0000-4000-8000-000000000001", name: "Haruki Murakami", type: "urn:entity:author", source: "qloo" }, "resolved");
+  const jazz = anchorFromMatch("Jazz", { kind: "tag", id: "urn:tag:genre:music:jazz", name: "Jazz", source: "qloo" }, "resolved");
+
+  it("flags place and cuisine tags outside the four categories, and nothing else", () => {
+    expect(unsearchedAnchors([japanese]).map((a) => a.input)).toEqual(["Japanese Food"]);
+    expect(unsearchedAnchors([korean, author, jazz, anchorFromPreference("quiet mornings"), anchorOwnWords("zzqx")])).toEqual([]);
+    expect(unsearchedAnchors(sampleAnchors())).toEqual([]); // the demo persona is fully searchable
+  });
+
+  it("explains what the demo covers, honestly, for one or several interests", () => {
+    expect(unsearchedNote([japanese])).toContain("“Japanese Food” isn’t one of this demo’s place types (cafés, bookstores, Korean restaurants, and museums)");
+    expect(unsearchedNote([japanese])).toContain("won’t add suggestions of its own");
+    const ramen = anchorFromMatch("Ramen", { kind: "tag", id: "urn:tag:genre:place:restaurant:ramen", name: "Ramen", source: "qloo" }, "resolved");
+    expect(unsearchedNote([japanese, ramen])).toContain("“Japanese Food”, “Ramen” aren’t");
+    expect(unsearchedNote([korean])).toBeNull();
+    expect(unsearchedShort([japanese])).toBe("Japanese Food: taste signal only. This demo covers cafés, bookstores, Korean restaurants, and museums.");
+    expect(unsearchedShort([korean])).toBeNull();
+  });
+
+  it("an unsearched interest adds no category of its own", () => {
+    const state: FlowState = { ...sample(), anchors: [japanese] };
+    expect(selectCategories(state)).toEqual(["cafe", "bookstore", "korean_restaurant", "museum"]); // no routine chosen: all four
+    expect(buildTasteInput(state).interests).toEqual(["Japanese Food"]); // still sent as a taste signal
+  });
+
+  it("each routine card says what it covers in this demo", () => {
+    expect(Object.fromEntries(ROUTINE_CARDS.map((r) => [r.id, r.covers]))).toEqual({
+      work: "cafés and bookstores", meals: "Korean restaurants", weekend: "museums and bookstores", arts: "museums and cultural venues",
+    });
   });
 });

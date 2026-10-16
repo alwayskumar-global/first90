@@ -10,7 +10,7 @@ import type { StepId } from "@/lib/agent/trace";
 import { ApiError, buildPlanRequest } from "@/lib/flow/api";
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { buildTasteInput } from "@/lib/flow/input";
-import { areaText, choicesText, rangeText } from "@/lib/flow/summary";
+import { areaText, choicesText, rangeText, unsearchedShort } from "@/lib/flow/summary";
 
 type Mode = "building" | "slow" | "partial" | "error" | "empty";
 
@@ -107,6 +107,7 @@ export function Building() {
   };
 
   const interests = state.anchors;
+  const unsearchedText = unsearchedShort(interests);
   const retryAfter = error?.retryAfterSeconds;
 
   return (
@@ -218,6 +219,12 @@ export function Building() {
                 ))}
                 {interests.length > 3 ? <span style={{ font: "500 13px/1 var(--font-sans)", color: "var(--text-secondary)", padding: "7px 2px" }}>+{interests.length - 3} more</span> : null}
               </dd>
+              {unsearchedText ? (
+                <>
+                  <dt style={{ color: "var(--text-muted)" }}>Not searched</dt>
+                  <dd style={{ margin: 0, color: "var(--text-secondary)" }}>{unsearchedText}</dd>
+                </>
+              ) : null}
               <dt style={{ color: "var(--text-muted)" }}>Preferences</dt>
               <dd style={{ margin: 0, fontWeight: 500 }}>{choicesText(state.prefs)}</dd>
             </dl>

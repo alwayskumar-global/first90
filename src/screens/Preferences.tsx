@@ -96,6 +96,7 @@ export function Preferences() {
                           </span>
                           <span style={{ font: "500 16px/1.3 var(--font-sans)" }}>{routine.title}</span>
                           <span style={{ font: "400 14px/1.45 var(--font-sans)", color: "var(--text-secondary)" }}>{routine.desc}</span>
+                          <span style={{ font: "500 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>In this demo: {routine.covers}</span>
                         </button>
                       );
                     })}

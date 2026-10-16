@@ -7,7 +7,7 @@ import { allItems } from "@/domain/session";
 import { Icon } from "@/components/Icon";
 import { Badge, Button, StageNav, STAGES, StateBanner, type StageId } from "@/components/ui";
 import { useFlow } from "@/lib/flow/FlowProvider";
-import { areaText, choicesText, rangeText } from "@/lib/flow/summary";
+import { areaText, choicesText, rangeText, unsearchedShort } from "@/lib/flow/summary";
 import { CATEGORY_ICON, CATEGORY_LABEL, ROUTINE_BLURB, connectedInterests, distanceText } from "./placeView";
 import { ReplaceDialog } from "./ReplaceDialog";
 
@@ -46,6 +46,7 @@ export function Plan() {
   const flagged = new Set(session.outOfLimitItemIds);
   const replacingItem: PlanItem | undefined = replacing ? allItems(session).find((item) => item.id === replacing) : undefined;
   const interests = state.anchors;
+  const unsearchedText = unsearchedShort(interests);
 
   return (
     <div className="f90-page">
@@ -222,6 +223,9 @@ export function Plan() {
                     {interests.map((a) => <span key={a.input} style={{ font: "500 13px/1 var(--font-sans)", background: "var(--stone-100)", padding: "7px 11px", borderRadius: 999 }}>{a.name}</span>)}
                   </dd>
                 </div>
+                {unsearchedText ? (
+                  <div><dt style={label("600 11px/1.3 var(--font-sans)")}>Not searched</dt><dd style={{ margin: "4px 0 0", color: "var(--text-secondary)" }}>{unsearchedText}</dd></div>
+                ) : null}
                 <div><dt style={label("600 11px/1.3 var(--font-sans)")}>Preferences</dt><dd style={{ margin: "4px 0 0", fontWeight: 500 }}>{choicesText(state.prefs)}</dd></div>
               </dl>
             </div>

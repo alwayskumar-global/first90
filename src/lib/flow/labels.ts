@@ -51,6 +51,16 @@ export function anchorFromMatch(input: string, match: InterestMatch, kind: "reso
   };
 }
 
+/**
+ * CR-008: interests that name a kind of place Qloo knows but this demo does not search (Japanese food, libraries...).
+ * They are still sent to Qloo as taste signals; they just cannot add suggestions of their own.
+ */
+export function unsearchedAnchors(anchors: Anchor[]): Anchor[] {
+  return anchors.filter(
+    (a) => (a.kind === "resolved" || a.kind === "confirmed") && !a.category && !!a.matchId?.startsWith("urn:tag:") && a.matchId.includes(":place:"),
+  );
+}
+
 export function anchorFromPreference(input: string): Anchor {
   return { input, name: input, type: "Preference", kind: "preference" };
 }

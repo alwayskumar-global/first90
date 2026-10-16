@@ -1,12 +1,30 @@
 import { NEIGHBORHOODS, SEARCH_SCOPES, type ScopeKey } from "@/domain/demo";
-import type { AtmosphereChoice, BudgetChoice, FlowState, RoutineId } from "./types";
+import { unsearchedAnchors } from "./labels";
+import type { Anchor, AtmosphereChoice, BudgetChoice, FlowState, RoutineId } from "./types";
 
-export const ROUTINE_CARDS: { id: RoutineId; title: string; desc: string; icon: "book-open" | "utensils" | "footprints" | "landmark" }[] = [
-  { id: "work", title: "A place to work or read", desc: "Quiet spots for a laptop or a long book", icon: "book-open" },
-  { id: "meals", title: "Easy meals out", desc: "Dependable, relaxed places to eat", icon: "utensils" },
-  { id: "weekend", title: "Weekend exploring", desc: "Something to wander into on a free day", icon: "footprints" },
-  { id: "arts", title: "Arts and culture", desc: "Galleries, venues, and cultural spaces", icon: "landmark" },
+/** What the demo can suggest, in the words used in notes. */
+export const DEMO_COVERS = "cafés, bookstores, Korean restaurants, and museums";
+
+export const ROUTINE_CARDS: { id: RoutineId; title: string; desc: string; covers: string; icon: "book-open" | "utensils" | "footprints" | "landmark" }[] = [
+  { id: "work", title: "A place to work or read", desc: "Quiet spots for a laptop or a long book", covers: "cafés and bookstores", icon: "book-open" },
+  { id: "meals", title: "Easy meals out", desc: "Dependable, relaxed places to eat", covers: "Korean restaurants", icon: "utensils" },
+  { id: "weekend", title: "Weekend exploring", desc: "Something to wander into on a free day", covers: "museums and bookstores", icon: "footprints" },
+  { id: "arts", title: "Arts and culture", desc: "Galleries, venues, and cultural spaces", covers: "museums and cultural venues", icon: "landmark" },
 ];
+
+/** Full sentence for the interest step, or null when every interest can add suggestions (or is not a place type). */
+export function unsearchedNote(anchors: Anchor[]): string | null {
+  const names = unsearchedAnchors(anchors).map((a) => `“${a.name}”`);
+  if (names.length === 0) return null;
+  const many = names.length > 1;
+  return `${names.join(", ")} ${many ? "aren’t" : "isn’t"} one of this demo’s place types (${DEMO_COVERS}). ${many ? "They’ll" : "It’ll"} still help rank places as ${many ? "taste signals" : "a taste signal"}, but won’t add suggestions of ${many ? "their" : "its"} own.`;
+}
+
+/** Short form for the plan and progress summaries. */
+export function unsearchedShort(anchors: Anchor[]): string | null {
+  const found = unsearchedAnchors(anchors);
+  return found.length === 0 ? null : `${found.map((a) => a.name).join(", ")}: taste signal only. This demo covers ${DEMO_COVERS}.`;
+}
 export const ATMOSPHERE_CARDS: { id: AtmosphereChoice; title: string; desc: string }[] = [
   { id: "quiet", title: "Quiet and relaxed", desc: "Calmer places, easy to talk or focus" },
   { id: "mix", title: "A mix of both", desc: "Some of each, depending on the day" },

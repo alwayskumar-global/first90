@@ -1,4 +1,4 @@
-import { expect, test, allItems, articles, buildFromInterests, resetMock, samplePlan, STAGE_HEADINGS, stageButton, startSample } from "./helpers";
+import { expect, test, type Session, allItems, articles, buildFromInterests, resetMock, samplePlan, STAGE_HEADINGS, stageButton, startSample } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetMock(request);
@@ -102,4 +102,30 @@ test("a word Qloo knows several ways offers choices you can tell apart", async (
   expect(labels.join("|")).toContain("Library · Kind of place");
   await page.getByRole("button", { name: "Library · Restaurant style" }).click();
   await expect(page.getByText("Library").first()).toBeVisible();
+});
+
+test("an interest the demo cannot search is said so, at the interest step, in the routines and in the plan summary", async ({ page }) => {
+  await startSample(page);
+  await page.getByRole("textbox", { name: /Search interests/ }).fill("japanese food");
+  await page.getByRole("button", { name: /^Japanese Food .* Add$/ }).click();
+  const note = page.getByRole("note").filter({ hasText: "“Japanese Food” isn’t one of this demo’s place types" });
+  await expect(note).toContainText("cafés, bookstores, Korean restaurants, and museums");
+  await expect(note).toContainText("won’t add suggestions of its own");
+
+  await page.getByRole("button", { name: "Continue to preferences" }).click();
+  await expect(page.getByText("In this demo: Korean restaurants")).toBeVisible();
+  await expect(page.getByText("In this demo: museums and cultural venues")).toBeVisible();
+
+  await page.getByRole("button", { name: "Build my plan" }).click();
+  await expect(page).toHaveURL(/\/plan$/, { timeout: 45_000 });
+  const session = await page.evaluate(() => (JSON.parse(window.localStorage.getItem("f90.flow.v1") ?? "{}") as { session: Session }).session);
+  expect(session.plan.input["interests"]).toContain("japanese food");
+  // no Japanese place appears; the interest only shapes ranking (it may be named as a signal in a "because" line)
+  expect(allItems(session).every((item) => ["cafe", "bookstore", "korean_restaurant", "museum"].includes(item.category))).toBe(true);
+  await expect(page.getByText("Japanese Food: taste signal only. This demo covers cafés, bookstores, Korean restaurants, and museums.")).toBeVisible();
+});
+
+test("the sample persona, fully searchable, shows no 'not searched' note", async ({ page }) => {
+  await startSample(page);
+  await expect(page.getByRole("note")).toHaveCount(0);
 });
