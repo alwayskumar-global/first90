@@ -1,13 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { feedbackSchema, planSessionSchema, tasteInputSchema } from "@/domain/schemas";
-import { diagnosticsEnabled, ConfigError, readQlooConfig } from "@/lib/config";
-import { FeedbackError } from "@/lib/agent/revise";
+import { diagnosticsEnabled, readQlooConfig } from "@/lib/config";
+import { errorResponse } from "@/server/errors";
 import { evaluateSession } from "@/lib/agent/rubric";
 import { runScenarios } from "@/lib/agent/scenarios";
-import { buildPlan, revisePlan, WorkflowError, type WorkflowDeps } from "@/lib/agent/workflow";
+import { buildPlan, revisePlan, type WorkflowDeps } from "@/lib/agent/workflow";
 import { withCache, sharedCache } from "@/lib/qloo/cache";
 import { createQlooClient } from "@/lib/qloo/client";
-import { QlooError } from "@/lib/qloo/errors";
 
 /**
  * Plan engine diagnostics (Milestone 2). Gated like the M1 diagnostics: on in
@@ -21,25 +20,6 @@ import { QlooError } from "@/lib/qloo/errors";
 function deps(): WorkflowDeps {
   // Paced: the scenario runner makes ~30 requests in one go and a burst tripped Qloo's rate limit.
   return { client: withCache(createQlooClient({ ...readQlooConfig(), minIntervalMs: 400 }), sharedCache()) };
-}
-
-function errorResponse(error: unknown) {
-  if (error instanceof ConfigError) return NextResponse.json({ error: error.message }, { status: 503 });
-  if (error instanceof WorkflowError) {
-    return NextResponse.json(
-      { error: error.message, kind: error.kind, retryable: error.retryable },
-      { status: error.kind === "invalid_input" ? 400 : 502 },
-    );
-  }
-  if (error instanceof FeedbackError) return NextResponse.json({ error: error.message, kind: "bad_feedback" }, { status: 400 });
-  if (error instanceof QlooError) {
-    const status = error.kind === "rate_limit" ? 429 : error.kind === "invalid_request" ? 400 : 502;
-    return NextResponse.json(
-      { error: error.message, kind: error.kind, retryable: error.retryable, retryAfterSeconds: error.retryAfterSeconds },
-      { status },
-    );
-  }
-  return NextResponse.json({ error: "Unexpected server error." }, { status: 500 });
 }
 
 export async function GET(request: NextRequest) {

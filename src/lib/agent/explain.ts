@@ -1,4 +1,4 @@
-import { CATEGORIES, DEMO_AREA } from "@/domain/demo";
+import { CATEGORIES, DEMO_AREA, resolveCenter } from "@/domain/demo";
 import type {
   ExplanationBasis,
   PlaceCandidate,
@@ -9,7 +9,7 @@ import type {
 } from "@/domain/types";
 import { lacksAtmosphereData, livelySignals, morningSignals, quietSignals } from "./atmosphere";
 
-export const UNVERIFIED_NOTICE = "Check current hours, prices, and availability before visiting.";
+export const UNVERIFIED_NOTICE = "Check current hours, prices, and details before visiting.";
 export const PRICE_UNKNOWN_NOTICE = "Price not available — check current details.";
 export const INDEPENDENCE_NOTICE = "Qloo doesn't say whether this shop is independent.";
 export const NO_ATMOSPHERE_NOTICE = "Qloo returned no noise or ambience data for this place.";
@@ -121,7 +121,7 @@ export async function explainCandidate(
   const distance = candidate.evidence.distanceMeters;
   const where =
     distance !== undefined
-      ? `${capitalize(category.noun)} about ${formatKm(distance)} from ${DEMO_AREA.centerLabel}.`
+      ? `${capitalize(category.noun)} about ${formatKm(distance)} from ${resolveCenter(ctx.input.neighborhoodKey).label}.`
       : `${capitalize(category.noun)} in ${DEMO_AREA.label}.`;
   const { basis, sentence } = basisFor(candidate, ctx);
   const highlights = highlightsFor(candidate, ctx.input);

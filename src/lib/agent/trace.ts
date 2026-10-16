@@ -42,18 +42,25 @@ export interface TraceRecorder {
   steps(): StepTrace[];
 }
 
-export function createTraceRecorder(now: () => number = Date.now): TraceRecorder {
+export function createTraceRecorder(
+  now: () => number = Date.now,
+  onRecord?: (step: StepTrace) => void,
+): TraceRecorder {
   const recorded: StepTrace[] = [];
+  const push = (step: StepTrace) => {
+    recorded.push(step);
+    onRecord?.(step);
+  };
   return {
     async step(id, fn, describe) {
       const startedAt = now();
       const value = await fn();
       const info = describe(value);
-      recorded.push({ id, label: STEP_LABELS[id], durationMs: Math.max(0, now() - startedAt), ...info });
+      push({ id, label: STEP_LABELS[id], durationMs: Math.max(0, now() - startedAt), ...info });
       return value;
     },
     fail(id, summary, startedAt) {
-      recorded.push({ id, label: STEP_LABELS[id], status: "failed", summary, durationMs: Math.max(0, now() - startedAt) });
+      push({ id, label: STEP_LABELS[id], status: "failed", summary, durationMs: Math.max(0, now() - startedAt) });
     },
     steps: () => [...recorded],
   };

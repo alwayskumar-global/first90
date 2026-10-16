@@ -28,6 +28,8 @@ export interface TasteInput {
   confirmations?: Record<string, string>;
   /** Destination key; the product supports only the locked demo area. */
   areaKey: string;
+  /** Optional neighborhood anchor (see NEIGHBORHOODS); omitted = downtown Raleigh. */
+  neighborhoodKey?: string;
   /** Hard distance limit in meters. Always explicit: Qloo returns nothing without it. */
   radiusMeters: number;
   categories: CategoryKey[];
@@ -228,6 +230,17 @@ export interface SignalSummary {
   label: string;
 }
 
+/** How each requested category fared in the latest build (drives the Building/partial states). */
+export interface CategoryCoverage {
+  category: CategoryKey;
+  /** False when Qloo could not be reached for this category. */
+  loaded: boolean;
+  /** Places that met every limit. */
+  eligible: number;
+  /** Places of this category in the plan. */
+  inPlan: number;
+}
+
 export interface PlanSession {
   plan: Plan;
   /** Normalized Qloo records for the items currently in the plan (keyed by entity ID). */
@@ -240,6 +253,8 @@ export interface PlanSession {
    * shown as outside the limit so the user can replace them. Empty after a fresh build.
    */
   outOfLimitItemIds: string[];
+  /** Present on a fresh build; not updated by feedback. */
+  coverage?: CategoryCoverage[];
   /** Interests that need the user to pick one of several matches. */
   needsConfirmation: { input: string; matches: InterestMatch[] }[];
   notes: string[];

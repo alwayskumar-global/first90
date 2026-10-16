@@ -1,4 +1,4 @@
-import { CATEGORIES, CATEGORY_KEYS, POOL_SIZE_PER_CATEGORY, DEMO_AREA, type CategoryKey } from "@/domain/demo";
+import { CATEGORIES, CATEGORY_KEYS, POOL_SIZE_PER_CATEGORY, type CategoryKey } from "@/domain/demo";
 import type {
   InterestMatch,
   PlaceCandidate,
@@ -93,6 +93,7 @@ export async function loadPool(
   args: {
     categories: CategoryKey[];
     signals: SignalSummary[];
+    center: { lat: number; lon: number };
     queryRadiusMeters: number;
     queryMaxPriceLevel?: number;
   },
@@ -102,7 +103,7 @@ export async function loadPool(
       try {
         const result = await discoverPlaces(client, {
           category,
-          center: DEMO_AREA.center,
+          center: args.center,
           radiusMeters: args.queryRadiusMeters,
           signalEntityIds: args.signals.filter((s) => s.kind === "entity").map((s) => s.id),
           signalTagIds: args.signals.filter((s) => s.kind === "tag" && s.id !== definition.filterTagId).map((s) => s.id),

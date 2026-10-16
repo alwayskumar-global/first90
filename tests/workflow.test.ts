@@ -203,6 +203,36 @@ describe("buildPlan", () => {
     expect(session.notes.join(" ")).toContain("No verified places matched your limits");
   });
 
+  it("anchors the search at a chosen neighborhood and names it in the explanation", async () => {
+    const { fake, result } = build(largeRaw(), { ...BASE_INPUT, neighborhoodKey: "five-points" });
+    const { session } = await result;
+    const location = fake.placeInsights.mock.calls[0]![0]["filter.location"];
+    expect(location).toBe("POINT(-78.6402 35.8056)");
+    const withDistance = itemsOf(session).find((item) => item.why.includes("km from"))!;
+    expect(withDistance.why).toContain("km from Five Points");
+  });
+
+  it("rejects an unknown neighborhood", () => {
+    expect(() => validateTasteInput({ ...BASE_INPUT, neighborhoodKey: "narnia" })).toThrow(WorkflowError);
+  });
+
+  it("reports per-category coverage for the Building and partial states", async () => {
+    const raw = largeRaw();
+    raw[BOOK_TAG] = [];
+    const { result } = build(raw);
+    const { session } = await result;
+    const by = Object.fromEntries((session.coverage ?? []).map((c) => [c.category, c]));
+    expect(by["bookstore"]).toMatchObject({ loaded: true, eligible: 0, inPlan: 0 });
+    expect(by["cafe"]!.eligible).toBeGreaterThan(0);
+    expect(by["cafe"]!.inPlan).toBeGreaterThan(0);
+  });
+
+  it("emits each step as it completes (used to stream progress)", async () => {
+    const seen: string[] = [];
+    await buildPlan({ client: fakeClient(largeRaw()).client, onStep: (step) => seen.push(step.id) }, BASE_INPUT);
+    expect(seen).toEqual(["resolve_interests", "discover_places", "apply_constraints", "construct_plan", "explain"]);
+  });
+
   it("is deterministic for identical input and Qloo data", async () => {
     const a = await build().result;
     const b = await build().result;

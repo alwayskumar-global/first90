@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORY_KEYS } from "./demo";
+import { CATEGORY_KEYS, NEIGHBORHOOD_KEYS } from "./demo";
 import { FEEDBACK_REASONS, STAGE_KEYS } from "./types";
 import type { Feedback, PlanSession, TasteInput } from "./types";
 
@@ -17,6 +17,7 @@ export const tasteInputSchema = z.object({
   interests: z.array(z.string().trim().min(1).max(80)).min(1).max(5),
   confirmations: z.record(z.string(), z.string().max(200)).optional(),
   areaKey: z.string().max(40),
+  neighborhoodKey: z.enum(NEIGHBORHOOD_KEYS as [string, ...string[]]).optional(),
   radiusMeters: z.number().min(1_000).max(50_000),
   categories: z.array(categoryKey).min(1).max(4),
   maxPriceLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
@@ -121,6 +122,9 @@ export const planSessionSchema = z.object({
   interests: z.array(resolvedInterest),
   signals: z.array(z.object({ id: z.string(), kind: z.enum(["entity", "tag"]), label: z.string() })),
   outOfLimitItemIds: z.array(z.string()),
+  coverage: z
+    .array(z.object({ category: categoryKey, loaded: z.boolean(), eligible: z.number(), inPlan: z.number() }))
+    .optional(),
   needsConfirmation: z.array(z.object({ input: z.string(), matches: z.array(interestMatch) })),
   notes: z.array(z.string()),
 }) as unknown as z.ZodType<PlanSession>;

@@ -58,7 +58,7 @@ Three honest bases, shown with every item (`PlanItem.basis`):
 - `taste_signals`: Qloo ranked with tag picks but returns no attribution: "Qloo ranked it using your picks: ..." (no contribution claim).
 - `category_and_distance`: no taste ranking returned.
 
-Never a percentage or probability. Highlights are verbatim Qloo tags that back a stated preference. Every item carries "Check current hours, prices, and availability before visiting." A link appears only if Qloo returned an http(s) website. An optional LLM wording adapter exists but is **off by default**; its output is rejected if it adds a number, percentage/probability language or a URL not in the facts.
+Never a percentage or probability. Highlights are verbatim Qloo tags that back a stated preference. Every item carries "Check current hours, prices, and details before visiting." A link appears only if Qloo returned an http(s) website. An optional LLM wording adapter exists but is **off by default**; its output is rejected if it adds a number, percentage/probability language or a URL not in the facts.
 
 ## Revision (`revise.ts`)
 

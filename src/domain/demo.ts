@@ -113,3 +113,43 @@ export const MIN_RADIUS_METERS = 2_000;
 
 /** Candidates requested per category; depth for diversification and replacements. */
 export const POOL_SIZE_PER_CATEGORY = 30;
+
+// ------------------------------------------------------- areas (Milestone 3)
+
+/**
+ * Search anchors for the neighborhoods offered in the setup flow. Coordinates are
+ * approximate neighborhood centers chosen by hand for this demo (not from Qloo);
+ * distances shown to users are measured from these points, so the UI labels them
+ * "from <name>". The default anchor is downtown Raleigh.
+ */
+export const NEIGHBORHOODS = {
+  "five-points": { name: "Five Points", lat: 35.8056, lon: -78.6402 },
+  warehouse: { name: "Warehouse District", lat: 35.7790, lon: -78.6445 },
+  oakwood: { name: "Historic Oakwood", lat: 35.79, lon: -78.629 },
+  downtown: { name: "Downtown Raleigh", lat: 35.7796, lon: -78.6382 },
+  glenwood: { name: "Glenwood South", lat: 35.7885, lon: -78.6455 },
+  cameron: { name: "Cameron Village", lat: 35.7902, lon: -78.6565 },
+  boylan: { name: "Boylan Heights", lat: 35.7698, lon: -78.6522 },
+  "north-hills": { name: "North Hills", lat: 35.8383, lon: -78.6419 },
+} as const;
+export type NeighborhoodKey = keyof typeof NEIGHBORHOODS;
+export const NEIGHBORHOOD_KEYS = Object.keys(NEIGHBORHOODS) as NeighborhoodKey[];
+export const isNeighborhoodKey = (value: string): value is NeighborhoodKey =>
+  (NEIGHBORHOOD_KEYS as string[]).includes(value);
+
+/** How wide to look: a hard distance limit, applied by the planner. */
+export const SEARCH_SCOPES = {
+  nearby: { label: "Nearby", radiusMeters: 5_000 },
+  flexible: { label: "Flexible", radiusMeters: 10_000 },
+  city: { label: "Across the city", radiusMeters: 15_000 },
+} as const;
+export type ScopeKey = keyof typeof SEARCH_SCOPES;
+
+/** Search center and the name used in "about 2.3 km from ..." for a chosen neighborhood (or downtown). */
+export function resolveCenter(neighborhoodKey?: string): { center: { lat: number; lon: number }; label: string } {
+  if (neighborhoodKey && isNeighborhoodKey(neighborhoodKey)) {
+    const n = NEIGHBORHOODS[neighborhoodKey];
+    return { center: { lat: n.lat, lon: n.lon }, label: neighborhoodKey === "downtown" ? "downtown Raleigh" : n.name };
+  }
+  return { center: DEMO_AREA.center, label: DEMO_AREA.centerLabel };
+}

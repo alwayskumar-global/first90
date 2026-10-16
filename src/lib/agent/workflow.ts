@@ -1,6 +1,7 @@
-import { CATEGORIES, CATEGORY_KEYS, DEMO_AREA } from "@/domain/demo";
+import { CATEGORIES, CATEGORY_KEYS, DEMO_AREA, isNeighborhoodKey, resolveCenter } from "@/domain/demo";
 import {
   STAGE_KEYS,
+  type CategoryCoverage,
   type Feedback,
   type PlaceCandidate,
   type Plan,
@@ -35,6 +36,8 @@ export interface WorkflowDeps {
   now?: () => number;
   /** Optional LLM wording; off by default. Output is validated against the facts. */
   wording?: WordingAdapter;
+  /** Called as each workflow step completes (used to stream progress to the UI). */
+  onStep?: (step: StepTrace) => void;
 }
 
 export function validateTasteInput(input: TasteInput): void {
@@ -42,6 +45,7 @@ export function validateTasteInput(input: TasteInput): void {
     throw new WorkflowError("invalid_input", message);
   };
   if (input.areaKey !== DEMO_AREA.key) bad(`Only ${DEMO_AREA.label} is supported.`);
+  if (input.neighborhoodKey !== undefined && !isNeighborhoodKey(input.neighborhoodKey)) bad("Unknown neighborhood.");
   const interests = input.interests.map((value) => value.trim()).filter(Boolean);
   if (interests.length < 1 || interests.length > 5) bad("Provide between 1 and 5 interests.");
   if (input.categories.length < 1 || input.categories.some((key) => !CATEGORY_KEYS.includes(key))) {
@@ -60,7 +64,7 @@ export interface BuildResult {
 export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promise<BuildResult> {
   validateTasteInput(rawInput);
   const { client, wording } = deps;
-  const trace = createTraceRecorder(deps.now);
+  const trace = createTraceRecorder(deps.now, deps.onStep);
   const base: TasteInput = { ...rawInput, interests: rawInput.interests.map((value) => value.trim()).filter(Boolean) };
 
   // 1. resolve interests
@@ -94,6 +98,7 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
       loadPool(client, {
         categories: input.categories,
         signals: summary.signals,
+        center: resolveCenter(input.neighborhoodKey).center,
         queryRadiusMeters: input.radiusMeters,
         ...(queryMaxPriceLevel !== undefined ? { queryMaxPriceLevel } : {}),
       }),
@@ -166,6 +171,13 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
   const candidates: Record<string, PlaceCandidate> = {};
   for (const stage of STAGE_KEYS) for (const pick of picks[stage]) candidates[pick.candidate.qlooEntityId] = pick.candidate;
 
+  const coverage: CategoryCoverage[] = input.categories.map((category) => ({
+    category,
+    loaded: !pool.failedCategories.includes(category),
+    eligible: selection.byCategory[category].eligible,
+    inPlan: STAGE_KEYS.reduce((n, key) => n + stages[key].filter((item) => item.category === category).length, 0),
+  }));
+
   const plan: Plan = {
     input,
     queryRadiusMeters: input.radiusMeters,
@@ -206,6 +218,7 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
       interests: resolved,
       signals: summary.signals,
       outOfLimitItemIds: [],
+      coverage,
       needsConfirmation: summary.needsConfirmation,
       notes,
     },
@@ -224,7 +237,7 @@ export interface ReviseResult extends BuildResult {
  * pool has no alternate under the new ceiling.
  */
 export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedback: Feedback): Promise<ReviseResult> {
-  const trace = createTraceRecorder(deps.now);
+  const trace = createTraceRecorder(deps.now, deps.onStep);
   const { client, wording } = deps;
   const { plan } = session;
 
@@ -232,9 +245,11 @@ export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedb
     "revise",
     async () => {
       if (feedback.action === "save") return reviseWithPool({ session, feedback, pool: [], wording });
+      const center = resolveCenter(plan.input.neighborhoodKey).center;
       const pool = await loadPool(client, {
         categories: plan.input.categories,
         signals: session.signals,
+        center,
         queryRadiusMeters: plan.queryRadiusMeters,
         ...(plan.queryMaxPriceLevel !== undefined ? { queryMaxPriceLevel: plan.queryMaxPriceLevel } : {}),
       });
@@ -245,6 +260,7 @@ export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedb
         const tighter = await loadPool(client, {
           categories: plan.input.categories,
           signals: session.signals,
+          center,
           queryRadiusMeters: plan.queryRadiusMeters,
           queryMaxPriceLevel: ceiling,
         });
