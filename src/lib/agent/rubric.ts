@@ -63,12 +63,13 @@ export function evaluateSession(session: PlanSession): RubricReport {
     ? []
     : STAGE_KEYS.filter((stage) => {
         const inStage = plan.stages[stage].map((item) => item.category);
-        return inStage.length > 1 && new Set(inStage).size < Math.min(inStage.length, plan.input.categories.length);
+        // A sparse pool can force a repeat; a stage with several suggestions must still mix categories.
+        return inStage.length > 1 && new Set(inStage).size < 2;
       });
   add({
     id: "D3",
     group: "diversity",
-    description: "Categories are varied within each stage",
+    description: "Each stage with several suggestions mixes at least two categories",
     pass: crowded.length === 0,
     detail: afterFeedback ? "not applied after feedback: limits take priority" : crowded.join(", ") || undefined,
   });

@@ -25,7 +25,7 @@ Qloo category tags are broad (a discount store carried "Book store", a skating r
 Applied before ranking and never relaxed silently:
 - excluded (dismissed) entities
 - radius, using the distance Qloo returns (a place with no distance cannot be verified, so it is excluded)
-- price ceiling: a place over the ceiling is excluded; for categories Qloo prices, a place with no price is excluded (the ceiling cannot be verified); **cultural venues/museums with no price are kept and carry "Price not available — check current details." (CR-003)**
+- price ceiling: a place over the ceiling is excluded; for categories Qloo prices reliably (cafés, Korean restaurants), a place with no price is excluded (the ceiling cannot be verified); **museums/cultural venues (CR-003) and bookstores (CR-004) with no price are kept and carry "Price not available — check current details."** No price filter is sent to Qloo for those two categories, because Qloo's filter would drop every unpriced place; a known price above the ceiling is still excluded locally.
 - strict quiet (set by "too loud" feedback): excludes places Qloo tags `Loud` or with a lively ambience (`Lively`, `Social`, `High energy`, ...)
 
 ## Fit score (`scoring.ts`)
@@ -49,7 +49,7 @@ Atmosphere and morning signals are read only from Qloo's structured tags (`ambie
 
 ## Assignment (`planner.ts`)
 
-Stages are filled in order, 3 suggestions each, one per category within a stage where possible, no place twice. With fewer than nine eligible places, slots are spread (5 -> 2, 2, 1) so no stage is empty.
+Stages are filled in order, 3 suggestions each, one per category within a stage where possible, no place twice. With fewer than nine eligible places, slots are spread (5 -> 2, 2, 1) so no stage is empty. If greedy fill leaves a stage holding a single category, a deterministic swap with another stage (best total fit, ties by id) restores a mix.
 
 ## Explanations (`explain.ts`)
 

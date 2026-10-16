@@ -27,8 +27,10 @@ export interface CategoryDefinition {
   /** Qloo tag used as `filter.tags` for this category. */
   filterTagId: string;
   /**
-   * Whether Qloo carries price levels for this category. Museums and cultural
-   * venues return none, so a price ceiling cannot be checked for them (CR-003).
+   * Whether Qloo reliably carries price levels for this category. Museums and
+   * cultural venues return none (CR-003) and most bookstores none (CR-004), so a
+   * price ceiling cannot be checked for them: unpriced places are kept and flagged
+   * "Price not available", and no price filter is sent to Qloo for the category.
    */
   pricesAvailable: boolean;
 }
@@ -46,7 +48,8 @@ export const CATEGORIES: Record<CategoryKey, CategoryDefinition> = {
     label: "Bookstores",
     noun: "bookstore",
     filterTagId: "urn:tag:category:place:book_store",
-    pricesAvailable: true,
+    // CR-004: Qloo lists no price for most Raleigh bookstores, so a price ceiling keeps unpriced ones, flagged.
+    pricesAvailable: false,
   },
   korean_restaurant: {
     key: "korean_restaurant",

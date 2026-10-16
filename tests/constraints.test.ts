@@ -30,6 +30,12 @@ describe("hard constraints", () => {
     const museum = candidate({ id: "m", category: "museum" });
     expect(checkEligibility(museum, hard({ maxPriceLevel: 1 }))).toEqual({ eligible: true, priceUnknown: true });
   });
+  it("CR-004: keeps an unpriced bookstore under a ceiling and flags it, but still enforces a known price", () => {
+    const unpriced = candidate({ id: "b", category: "bookstore" });
+    expect(checkEligibility(unpriced, hard({ maxPriceLevel: 1 }))).toEqual({ eligible: true, priceUnknown: true });
+    const pricey = candidate({ id: "b2", category: "bookstore", priceLevel: 3 });
+    expect(checkEligibility(pricey, hard({ maxPriceLevel: 1 })).reason).toBe("over_price_ceiling");
+  });
   it("does not flag price at all when no ceiling is set", () => {
     expect(checkEligibility(candidate({ id: "m", category: "museum" }), hard())).toEqual({ eligible: true, priceUnknown: false });
   });

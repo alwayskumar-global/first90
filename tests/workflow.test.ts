@@ -133,10 +133,25 @@ describe("buildPlan", () => {
 
   it("explains an empty category under a price ceiling (Qloo drops places with no listed price)", async () => {
     const raw = largeRaw();
-    raw[BOOK_TAG] = [];
+    raw[CAFE_TAG] = [];
     const { result } = build(raw, { ...BASE_INPUT, maxPriceLevel: 2 });
     const { session } = await result;
-    expect(session.notes.join(" ")).toContain("Qloo returned none at or below $$");
+    expect(session.notes.join(" ")).toContain("No verified cafés met your limits (Qloo returned none at or below $$");
+  });
+
+  it("CR-004: keeps unpriced bookstores under a price ceiling, flagged, and sends Qloo no price filter for them", async () => {
+    const { fake, result } = build(largeRaw(), { ...BASE_INPUT, maxPriceLevel: 1 });
+    const { session } = await result;
+    const bookstores = itemsOf(session).filter((item) => item.category === "bookstore");
+    expect(bookstores.length).toBeGreaterThan(0);
+    for (const item of bookstores) {
+      const price = session.candidates[item.qlooEntityId]!.priceLevel;
+      if (price === undefined) expect(item.notices).toContain("Price not available \u2014 check current details.");
+      else expect(price).toBeLessThanOrEqual(1);
+    }
+    const calls = fake.placeInsights.mock.calls.map(([p]) => p as Record<string, unknown>);
+    expect(calls.find((p) => p["filter.tags"] === BOOK_TAG)!["filter.price_level.max"]).toBeUndefined();
+    expect(evaluateSession(session).checks.filter((c) => !c.pass)).toEqual([]);
   });
 
   it("keeps working when one category fails, and says which", async () => {

@@ -58,7 +58,7 @@ src/
 - `filter.price_level.max` and `filter.exclude.entities` are honored.
 - `feature.explainability=true` works for places with entity signals.
 - Tag-filtered results can contain off-category places; the M2 planner must post-filter on returned tags.
-- Museums return no price level; price limits cannot be checked for them.
+- Museums return no price level, and most bookstores none; price limits cannot be checked for them (CR-003, CR-004): kept and flagged.
 - Climbing venues were not found in Raleigh (dropped from the demo).
 
 - Tag signals return `query.affinity` but no explainability; entity signals return both.
