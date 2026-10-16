@@ -117,7 +117,10 @@ http
     }
     if (url.pathname === "/v2/tags") {
       const q = (url.searchParams.get("filter.query") ?? "").toLowerCase();
-      const tags = q === "ramen" ? [{ id: "urn:tag:genre:place:restaurant:ramen", name: "Ramen", type: "urn:tag:genre:place" }] : [];
+      const lib = (id, type) => ({ id, name: "Library", type });
+      const tags = q === "ramen" ? [{ id: "urn:tag:genre:place:restaurant:ramen", name: "Ramen", type: "urn:tag:genre:place" }]
+        : q === "library" ? [lib("urn:tag:genre:place:library", "urn:tag:genre:place"), lib("urn:tag:category:place:library", "urn:tag:category:place"), lib("urn:tag:genre:place:restaurant:library", "urn:tag:genre:place"), lib("urn:tag:genre:place:hotel:library", "urn:tag:genre:place")]
+        : [];
       return json(res, 200, { success: true, results: { tags } });
     }
     if (url.pathname === "/v2/insights") {

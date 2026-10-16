@@ -18,6 +18,27 @@ export function typeLabel(match: InterestMatch): string {
   return "Interest";
 }
 
+const cap = (word: string) => word.charAt(0).toUpperCase() + word.slice(1).replace(/_/g, " ");
+
+/**
+ * Plain-language kind of a Qloo tag, read from its id namespace. Qloo has several tags with the same name
+ * ("Library" as a kind of place, a restaurant style, a hotel style...); this is what tells the chips apart.
+ */
+export function tagKindLabel(id: string): string | null {
+  const [ns, domain, group, ...rest] = id.replace(/^urn:tag:/, "").split(":");
+  if (ns === "category" && domain === "place") return "Kind of place";
+  if (ns === "genre" && domain === "place") return group && rest.length > 0 ? `${cap(group)} style` : "Place style";
+  const named: Record<string, string> = {
+    amenity: "Amenity", setting: "Setting", nearby_attraction: "Nearby attraction",
+    specialty_dish: "Specialty dish", cuisine: "Cuisine", good_for: "Good for",
+  };
+  return ns ? (named[ns] ?? null) : null;
+}
+
+/** Chip text for one of several matches: the name plus whatever tells it apart from the others. */
+const optionLabel = (match: InterestMatch) =>
+  `${match.name} · ${(match.kind === "tag" ? tagKindLabel(match.id) : null) ?? typeLabel(match)}`;
+
 export function anchorFromMatch(input: string, match: InterestMatch, kind: "resolved" | "confirmed"): Anchor {
   const category = categoryOfTag(match.id);
   return {
@@ -50,14 +71,16 @@ export function outcomeFromResolved(resolved: ResolvedInterest): InterestOutcome
       return { status: "single", option: anchorFromMatch(resolved.input, resolved.match, "resolved") };
     case "preference":
       return { status: "single", option: anchorFromPreference(resolved.input) };
-    case "ambiguous":
-      return {
-        status: "ambiguous",
-        options: resolved.matches.map((match) => ({
-          label: `${match.name} · ${typeLabel(match)}`,
-          anchor: anchorFromMatch(resolved.input, match, "confirmed"),
-        })),
-      };
+    case "ambiguous": {
+      // Choices the user cannot tell apart are not choices: keep the first of any identical pair.
+      const seen = new Set<string>();
+      const options = resolved.matches
+        .map((match) => ({ label: optionLabel(match), anchor: anchorFromMatch(resolved.input, match, "confirmed") }))
+        .filter((option) => !seen.has(option.label) && !!seen.add(option.label));
+      return options.length === 1 && options[0]
+        ? { status: "single", option: { ...options[0].anchor, kind: "resolved" } }
+        : { status: "ambiguous", options };
+    }
     case "unmatched":
       return { status: "unmatched" };
   }

@@ -4,7 +4,7 @@ import { allItems, findItem, setSaved } from "@/domain/session";
 import { buildPlan } from "@/lib/agent/workflow";
 import { ApiError, readNdjson } from "@/lib/flow/api";
 import { buildTasteInput, selectCategories } from "@/lib/flow/input";
-import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved } from "@/lib/flow/labels";
+import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, tagKindLabel } from "@/lib/flow/labels";
 import { flowReducer, initialState, MAX_ANCHORS, sampleAnchors } from "@/lib/flow/state";
 import { areaText, choicesText, rangeText } from "@/lib/flow/summary";
 import type { FlowState } from "@/lib/flow/types";
@@ -167,5 +167,38 @@ describe("streaming client", () => {
   it("carries error details", () => {
     const error = new ApiError({ error: "slow", kind: "rate_limit", retryable: false, retryAfterSeconds: 9 });
     expect(error).toMatchObject({ kind: "rate_limit", retryable: false, retryAfterSeconds: 9, message: "slow" });
+  });
+});
+
+describe("ambiguous choices the user can tell apart", () => {
+  const tag = (id: string) => ({ kind: "tag" as const, id, name: "Library", source: "qloo" as const });
+
+  it("labels same-named Qloo tags by what kind of tag they are", () => {
+    expect(tagKindLabel("urn:tag:category:place:library")).toBe("Kind of place");
+    expect(tagKindLabel("urn:tag:genre:place:library")).toBe("Place style");
+    expect(tagKindLabel("urn:tag:genre:place:restaurant:library")).toBe("Restaurant style");
+    expect(tagKindLabel("urn:tag:genre:place:hotel:library")).toBe("Hotel style");
+    expect(tagKindLabel("urn:tag:amenity:qloo:library")).toBe("Amenity");
+    expect(tagKindLabel("urn:tag:something:else")).toBeNull();
+  });
+
+  it("shows four distinct chips for 'library', never four identical ones", () => {
+    const outcome = outcomeFromResolved({
+      status: "ambiguous",
+      input: "library",
+      matches: ["category:place:library", "genre:place:library", "genre:place:restaurant:library", "genre:place:hotel:library"].map((id) => tag(`urn:tag:${id}`)),
+    });
+    expect(outcome.status).toBe("ambiguous");
+    if (outcome.status !== "ambiguous") return;
+    const labels = outcome.options.map((o) => o.label);
+    expect(new Set(labels).size).toBe(4);
+    expect(labels).toContain("Library · Kind of place");
+    expect(labels).toContain("Library · Restaurant style");
+  });
+
+  it("collapses choices that stay identical, and resolves when only one is left", () => {
+    const dupes = { status: "ambiguous" as const, input: "x", matches: [tag("urn:tag:mystery:a"), tag("urn:tag:mystery:b")] };
+    const outcome = outcomeFromResolved(dupes);
+    expect(outcome.status).toBe("single");
   });
 });

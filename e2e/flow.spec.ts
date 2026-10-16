@@ -90,3 +90,16 @@ test("interests are capped at five and duplicates are ignored", async ({ page })
   await expect(page.getByRole("textbox", { name: /Search interests/ })).toBeDisabled();
   await expect(page.getByText("You’ve added five")).toBeVisible();
 });
+
+test("a word Qloo knows several ways offers choices you can tell apart", async ({ page }) => {
+  await page.goto("/interests");
+  await page.getByRole("textbox", { name: /Search interests/ }).fill("library");
+  await expect(page.getByText("“library” could mean more than one thing")).toBeVisible();
+  const chips = page.getByRole("button", { name: /^Library · / });
+  await expect(chips).toHaveCount(4);
+  const labels = await chips.allInnerTexts();
+  expect(new Set(labels).size).toBe(4);
+  expect(labels.join("|")).toContain("Library · Kind of place");
+  await page.getByRole("button", { name: "Library · Restaurant style" }).click();
+  await expect(page.getByText("Library").first()).toBeVisible();
+});
