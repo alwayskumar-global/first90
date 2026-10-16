@@ -51,13 +51,35 @@ function readExplainability(raw: Record<string, unknown> | undefined): Evidence[
   return out.length > 0 ? out : undefined;
 }
 
-function readTagNames(tags: unknown[] | undefined): string[] {
+const TAG_NAMESPACES = {
+  genre: ["urn:tag:genre:place", "urn:tag:category:place"],
+  ambience: ["urn:tag:ambience:qloo"],
+  noise: ["urn:tag:noise_level:qloo"],
+  time: ["urn:tag:time_of_day_fit:qloo"],
+  visit: ["urn:tag:visit_intent:qloo"],
+} as const;
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+/** Collect tag names whose Qloo namespace (the tag `type`) starts with one of the prefixes. */
+function tagNamesIn(tags: unknown[] | undefined, prefixes: readonly string[]): string[] {
   const names: string[] = [];
   for (const tag of tags ?? []) {
-    const name = typeof tag === "object" && tag !== null ? asString((tag as Record<string, unknown>)["name"]) : undefined;
-    if (name && !names.includes(name)) names.push(name);
+    if (typeof tag !== "object" || tag === null) continue;
+    const record = tag as Record<string, unknown>;
+    const type = asString(record["type"]);
+    const name = asString(record["name"]);
+    if (name && type && prefixes.some((prefix) => type.startsWith(prefix))) names.push(name);
   }
-  return names;
+  return unique(names);
+}
+
+function primaryGenreName(value: unknown): string | undefined {
+  if (typeof value === "string") return asString(value);
+  if (typeof value === "object" && value !== null) return asString((value as Record<string, unknown>)["name"]);
+  return undefined;
 }
 
 /**
@@ -72,11 +94,17 @@ export function normalizePlace(record: unknown, context: NormalizeContext): Plac
   const props = raw.properties ?? {};
 
   const priceLevel = asNumber(props["price_level"]);
+  const genreTags = tagNamesIn(raw.tags, TAG_NAMESPACES.genre);
+  const ambienceTags = tagNamesIn(raw.tags, TAG_NAMESPACES.ambience);
+  const [noiseLevel] = tagNamesIn(raw.tags, TAG_NAMESPACES.noise);
+  const timeOfDay = tagNamesIn(raw.tags, TAG_NAMESPACES.time);
+  const visitIntent = tagNamesIn(raw.tags, TAG_NAMESPACES.visit);
+  const primaryGenre = primaryGenreName(props["primary_genre"]);
   const evidence: Evidence = {
     signalEntityIds: context.signalEntityIds,
     signalTagIds: context.signalTagIds,
     filterTagIds: context.filterTagIds,
-    tagNames: readTagNames(raw.tags),
+    tagNames: unique([...ambienceTags, ...(noiseLevel ? [noiseLevel] : []), ...timeOfDay, ...genreTags]),
     ...(raw.query?.affinity !== undefined ? { affinity: raw.query.affinity } : {}),
     ...(raw.query?.distance !== undefined ? { distanceMeters: raw.query.distance } : {}),
   };
@@ -108,6 +136,14 @@ export function normalizePlace(record: unknown, context: NormalizeContext): Plac
     ...(rating !== undefined ? { businessRating: rating } : {}),
     ...(website ? { website } : {}),
     ...(phone ? { phone } : {}),
+    ...(primaryGenre ? { primaryGenre } : {}),
+    genreTags,
+    atmosphere: {
+      ambience: ambienceTags,
+      ...(noiseLevel ? { noiseLevel } : {}),
+      timeOfDay,
+      visitIntent,
+    },
     hasHoursData: hasContent(props["hours"]),
     ...(raw.popularity !== undefined ? { popularity: raw.popularity } : {}),
     evidence,

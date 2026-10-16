@@ -37,6 +37,9 @@ describe("discoverPlaces", () => {
       priceLevel: 2,
       website: "https://example.test/books",
       hasHoursData: true,
+      primaryGenre: "Book store",
+      genreTags: ["Book store"],
+      atmosphere: { ambience: ["Cozy"], noiseLevel: "Quiet", timeOfDay: ["Morning"], visitIntent: ["Routine visit"] },
       evidence: {
         signalEntityIds: ["sig-a", "sig-b"],
         filterTagIds: ["urn:tag:category:place:book_store"],
@@ -46,7 +49,7 @@ describe("discoverPlaces", () => {
           { entityId: "sig-a", score: 0.6 },
           { entityId: "sig-b", score: 0.4 },
         ],
-        tagNames: ["Cozy", "Book store"],
+        tagNames: ["Cozy", "Quiet", "Morning", "Book store"],
       },
     });
   });

@@ -14,8 +14,14 @@ export interface QlooClientOptions {
   timeoutMs?: number;
   /** Extra attempts for timeouts, network errors and 5xx. Never used for 429 or 4xx. */
   maxRetries?: number;
+  /**
+   * Minimum gap between request starts (ms), to stay under Qloo's rate limit
+   * during bursts such as the diagnostic scenario runner. 0 disables pacing.
+   */
+  minIntervalMs?: number;
   fetchImpl?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
+  now?: () => number;
 }
 
 export interface QlooClient {
@@ -41,11 +47,23 @@ export function createQlooClient(options: QlooClientOptions): QlooClient {
     baseUrl,
     timeoutMs = 15_000,
     maxRetries = 2,
+    minIntervalMs = 0,
     fetchImpl = fetch,
     sleep = defaultSleep,
+    now = Date.now,
   } = options;
 
+  let nextSlot = 0;
+  async function pace(): Promise<void> {
+    if (minIntervalMs <= 0) return;
+    const current = now();
+    const start = Math.max(current, nextSlot);
+    nextSlot = start + minIntervalMs; // reserve the slot synchronously so concurrent callers queue up
+    if (start > current) await sleep(start - current);
+  }
+
   async function attempt(url: string): Promise<Response> {
+    await pace();
     try {
       return await fetchImpl(url, {
         method: "GET",

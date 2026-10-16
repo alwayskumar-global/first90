@@ -106,4 +106,26 @@ describe("qloo client", () => {
     expect(url).toContain("/v2/tags?");
     expect(url).toContain("filter.query=jazz");
   });
+
+  it("spaces request starts by minIntervalMs, even for concurrent callers", async () => {
+    let clock = 1_000;
+    const sleeps: number[] = [];
+    const fetchImpl = vi.fn(async () => jsonResponse(insightsBody([])));
+    const paced = createQlooClient({
+      apiKey: TEST_KEY,
+      baseUrl,
+      minIntervalMs: 100,
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      now: () => clock,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+        clock += ms;
+      },
+    });
+    await Promise.all([paced.placeInsights(placeParams), paced.placeInsights(placeParams), paced.placeInsights(placeParams)]);
+    // three starts spaced 100 ms apart: the 2nd waits 100 ms, the 3rd another 100 ms (clock is shared with the fake sleep)
+    expect(sleeps).toEqual([100, 100]);
+    expect(clock).toBe(1_200);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
 });
