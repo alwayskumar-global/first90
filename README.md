@@ -1,92 +1,158 @@
 # First 90 Days
 
-Helps a newcomer build a life in a new city, one fitting routine at a time. It turns a few stated interests
-into a staged, revisable local discovery plan (First Week, First Month, Months 2-3) grounded in real
-[Qloo](https://docs.qloo.com) place data. Built for the Qloo Agentic Hackathon.
+**Build a life in a new city, one fitting routine at a time.**
 
-> **Status: Milestone 3 (UI implementation), awaiting design-fidelity review.** The eight screens from the supplied
-> design (Welcome, Location, Interests, Preferences, Building, Plan, Place details, Replace) run on the real
-> plan engine and live Qloo data. See [docs/UI_IMPLEMENTATION_NOTES.md](docs/UI_IMPLEMENTATION_NOTES.md) for how the
-> design maps to the product and where it was adapted, [docs/PLANNER.md](docs/PLANNER.md) for the engine.
+First 90 Days turns a newcomer's few stated interests ("indie bookstores, Korean food, coffee shops, quiet mornings") into a
+staged, revisable plan of real local places for their **First Week**, **First Month** and **Months 2–3**. Every place is a real
+record returned by the [Qloo](https://docs.qloo.com) API, every sentence explaining a suggestion is built from fields Qloo
+returned, and the user can save, replace or reject any suggestion and watch the plan change.
 
-## Demo scope
+Built for the **Qloo Agentic Hackathon**. Demo city: **Raleigh, NC**. Live demo: _add the deployed URL here_.
 
-Raleigh, NC; categories: cafes, bookstores, Korean restaurants, museums & cultural venues.
-Chosen from live coverage checks on the hackathon environment. Plan items are *suggested activities*, not
-scheduled events. Hours, prices and links are shown only when Qloo returns them and are labeled
-"check current details".
+## The problem
 
-## Setup
+People who relocate get generic "best of" lists. Those lists don't help them rebuild familiar routines: a morning coffee place that
+suits them, a bookshop to browse, somewhere to eat that feels like home, a cultural outing for a free afternoon. First 90 Days starts
+from what the person already likes and paces suggestions across their first three months, as *ideas to try*, never as scheduled events.
 
-Requires Node >= 22 and pnpm.
+## How Qloo and the agent divide the work
+
+| | Qloo | The agent (this repo, deterministic) |
+|---|---|---|
+| Understands | Taste: how places relate to the user's interests; which tags/entities exist | The user's words, limits and feedback |
+| Provides | Place records (name, address, price level, website, tags, ambience, noise, time-of-day fit), per-result `affinity`, per-pick `explainability` | Nothing it invents: it only filters, ranks, assigns and words what Qloo returned |
+| Decides | Which places match a taste signal in an area | Which of them are on-category, inside the user's limits, varied, and fit each stage; how to revise after feedback |
+
+Qloo endpoints used (hackathon environment, `X-Api-Key`):
+
+- `GET /search`: resolve a named interest (an author, an artist...) to a Qloo entity; several equal matches are shown for the user to choose.
+- `GET /v2/tags`: resolve an interest to a Qloo tag.
+- `GET /v2/insights` (`filter.type=urn:entity:place`): one request per category with `filter.tags` (category), `filter.location` + `filter.location.radius` (area), the user's other picks as `signal.interests.tags` / `signal.interests.entities`, `feature.explainability`, `filter.price_level.max`, `filter.exclude.entities`.
+
+### Why it is an agent, not a single call
+
+A bounded, observable tool-use loop (each step is streamed to the UI as it finishes):
+**resolve interests** (preference / alias / `/v2/tags` / `/search`) → **query places** (`/v2/insights`, one per category, using the user's other
+picks as taste signals) → **apply limits** (noise filter on Qloo's own `primary_genre`, then radius, price ceiling, exclusions, quiet) →
+**construct** (documented fit score, diversity across categories, three stages) → **explain** (words only from Qloo's fields) →
+**revise** (feedback becomes a concrete constraint; Qloo is re-queried only if the cached pool has no alternate). No LLM is used and
+none is needed to pass any gate; an optional, off-by-default wording hook rejects any text that adds a number, odds or link.
+Details: [docs/PLANNER.md](docs/PLANNER.md).
+
+## A redacted request-to-result example
+
+The same persona, changed in one interest and two limits. Real runs on the hackathon environment; place names, ids and other Qloo
+records are deliberately omitted (the Qloo guide asks that response data not be published in a public repo).
+
+**Scenario 1: baseline.** Interests: *indie bookstores, Korean food, coffee shops, quiet mornings*; Raleigh, 15 km; no budget.
+
+```
+GET /v2/insights
+  filter.type=urn:entity:place
+  filter.location=POINT(-78.6382 35.7796)          # downtown Raleigh
+  filter.location.radius=15000
+  filter.tags=urn:tag:category:place:cafe          # repeated for book_store, Korean restaurant, museum
+  signal.interests.tags=urn:tag:category:place:book_store,urn:tag:genre:place:restaurant:korean   # the user's *other* picks
+  take=30
+X-Api-Key: <redacted>
+
+→ 60 candidates across 4 categories → 39 on-category and inside the limits → 9 places, 3 per stage
+  each card: <place name> · <category> · "<x.x> km from downtown Raleigh"
+  why: "Qloo ranked it using your picks: “indie bookstores” and “Korean food”. Qloo tags it: <ambience/noise/time-of-day tags>."
+  mix: café 3 · bookstore 2 · museum 2 · Korean restaurant 2
+```
+
+**Scenario 2: changed.** "Korean food" → "art museums", distance 7.5 km, dining budget ≤ $$.
+
+```
+  signal.interests.tags=...book_store,...museum    # the signals changed
+  filter.location.radius=7500
+  filter.price_level.max=2                         # cafés and restaurants only; unpriced bookstores/museums are kept and marked
+
+→ 5 of the 9 places are different; mix: café 3 · museum 3 · bookstore 2 · Korean restaurant 1
+  places with no price show "Price not available — check current details."
+```
+
+**Scenario 3: a named interest.** Adding *Haruki Murakami* returns four same-name entities from `/search`; after the user picks the author, every
+card carries Qloo's attribution: *"Your pick “Haruki Murakami” contributed to how Qloo ranked it."*
+
+**Scenario 4: feedback.** *Too expensive* on a $$ café sets a $ ceiling and swaps in a cheaper café in the same stage while saved items stay put;
+*Too far* halves the distance limit; *Too lively* excludes places Qloo tags loud or lively; *Not interested* excludes the place and shows fewer of its kind.
+If nothing qualifies the app says so and changes nothing.
+
+## What the app will and will not say
+
+Plan §4 is enforced in code and tests: no invented places, hours, prices, ratings, events, scores or promises; affinity is never shown as a
+percentage; "affinity" is a ranking signal, not a prediction; hours/prices/availability are always labelled *"Check current hours, prices, and details before visiting."*;
+a link appears only if Qloo returned a website; no third-party photos are used.
+
+## Run it locally
+
+Requires Node ≥ 22 and pnpm.
 
 ```bash
 pnpm install
-cp .env.example .env.local   # then edit .env.local and set QLOO_API_KEY
-pnpm dev
+cp .env.example .env.local      # then set QLOO_API_KEY (and SESSION_SECRET, see below)
+pnpm dev                        # http://localhost:3000  ("Try a sample plan" prefills the demo persona)
 ```
 
-| Variable | Required | Notes |
+| Variable | Required | Purpose |
 |---|---|---|
-| `QLOO_API_KEY` | yes (for live calls) | Event-issued key. **Server-side only**; never prefix with `NEXT_PUBLIC_`, never commit it. |
-| `QLOO_BASE_URL` | no | Defaults to `https://hackathon.api.qloo.com`. Hackathon keys do not work on the staging or production hosts. |
-| `DIAGNOSTICS_ENABLED` | no | `true` enables `/api/diagnostics/qloo` in production. It is always on in development. |
+| `QLOO_API_KEY` | yes | Event-issued Qloo key. Server-side only; never `NEXT_PUBLIC_`; never committed. |
+| `SESSION_SECRET` | recommended | ≥ 16 chars. Signs plan sessions so tampered ones are rejected. If unset, a signing key is derived from `QLOO_API_KEY`. `openssl rand -hex 32` |
+| `QLOO_BASE_URL` | no | Default `https://hackathon.api.qloo.com`. (`http://127.0.0.1:…` is allowed only for the local test mock.) |
+| `DIAGNOSTICS_ENABLED` | no | `true` exposes `/api/diagnostics/*` in production. Leave unset. They are always on in development. |
+| `RATE_LIMIT_*`, `MAX_CONCURRENT_BUILDS`, `QLOO_CACHE_TTL_SECONDS` | no | Usage protection and cache tuning, see `.env.example`. |
 
-`pnpm build` and CI need no key; the key is read at request time only.
+> **Hackathon credentials expire after judging.** Running this project afterwards needs a new, authorized Qloo API key (and, as the
+> hackathon key is not valid on staging/production hosts, possibly a different `QLOO_BASE_URL`).
 
-## Scripts
+## Quality gates
 
-| Command | What it does |
+| Command | What it checks |
 |---|---|
-| `pnpm typecheck` | Generates Next route types, then `tsc --noEmit` (strict) |
-| `pnpm lint` | ESLint |
-| `pnpm test` | Vitest (no network; the Qloo client is tested with a fake `fetch`) |
-| `pnpm build` | Production build |
-| `pnpm check` | All of the above |
-
-## Using the app
-
-`pnpm dev`, open http://localhost:3000. The flow is Welcome -> Location -> Interests -> Preferences -> Building -> Plan.
-"Try a sample plan" prefills the demo persona. Everything stays in this browser (no accounts); "Start over" on the
-plan page clears it. Public API routes (`/api/plan`, `/api/interests`) are server-side, throttled per visitor, and never
-return the Qloo key.
-
-## Live diagnostic (development)
-
-With a key in `.env.local` and `pnpm dev` running:
-
-```bash
-curl 'localhost:3000/api/diagnostics/qloo?category=cafe'          # up to 5 normalized places
-curl 'localhost:3000/api/diagnostics/qloo?interest=ramen'         # interest resolution
-```
-
-Categories: `cafe`, `bookstore`, `korean_restaurant`, `museum`. The response never contains the key.
-
-Plan engine (also development-only; add `DIAGNOSTICS_ENABLED=true` to expose it in production):
-
-```bash
-# Runs the live demo scenarios (baseline, changed interests/limits, feedback revisions, entity interest)
-# and returns a rubric report. ~30 paced Qloo requests; run it sparingly.
-curl 'localhost:3000/api/diagnostics/plan?scenarios=1'
-
-# Build a plan, then revise it
-curl -X POST localhost:3000/api/diagnostics/plan -H 'content-type: application/json' \
-  -d '{"action":"build","input":{"interests":["indie bookstores","Korean food","coffee shops","quiet mornings"],"areaKey":"raleigh-nc","radiusMeters":15000,"categories":["cafe","bookstore","korean_restaurant","museum"],"atmosphere":"no_preference","preferMornings":false}}'
-```
+| `pnpm typecheck` · `pnpm lint` | strict TypeScript; ESLint |
+| `pnpm test` | unit tests (Vitest): client, validation, noise filter, planner, explanations, revision, signing, throttling |
+| `pnpm e2e` | production build + Playwright on desktop (1280×800, 1440×900) and phone (375×812) against a **local mock of Qloo** (synthetic data): primary flow, save/replace/undo, refresh persistence, 429, outage, empty data, no key (503), throttling, tampered sessions, grounding and wording audits, axe WCAG 2.2 AA scan of every screen |
+| `pnpm audit:secrets` | the key is not in git history, tracked files, or the client bundle; no env files or bulk data tracked |
+| `pnpm audit:live` | with a running app and a real key: rebuilds the plan, repeats the Qloo request, and checks every place's name, address, price level, website, distance and tags against Qloo's fresh response |
 
 ## Architecture
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+```
+Browser (React, no accounts; answers + plan kept in localStorage)
+  └─ /api/plan  (build: NDJSON step stream · revise)     /api/interests (resolve one interest)
+        │   per-visitor + global throttling · input validation · HMAC-signed sessions
+        ▼
+  src/lib/agent   workflow → pipeline → relevance → constraints → scoring → planner → explain → revise → rubric
+  src/lib/qloo    client (timeouts, bounded retry, no retry on 429) · schemas · normalizer · cache · interest resolver
+        ▼
+  Qloo API  (/search · /v2/tags · /v2/insights)
+```
 
-## Data & key handling
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLANNER.md](docs/PLANNER.md) (scoring formula, constraints, revision table) and
+[docs/UI_IMPLEMENTATION_NOTES.md](docs/UI_IMPLEMENTATION_NOTES.md) (how the design maps to behavior).
 
-- The Qloo key stays on the server. The repo contains no key and no bulk Qloo data; test fixtures are synthetic.
-- Hackathon credentials expire after judging. Running this project afterwards needs a new, authorized Qloo key.
+**Security and usage protection:** the key stays on the server; sessions round-trip through the browser but are HMAC-signed (editing a place, price or wording
+is rejected with `400`); per-visitor and global request limits, a concurrent-build cap, request pacing and an in-memory response cache keep a public link from exhausting the
+event key; diagnostics routes return `404` in production.
+
+## Known limitations
+
+- **Raleigh only**, four categories (cafés, bookstores, Korean restaurants, museums & cultural venues). Climbing and other categories had no coverage in the hackathon data.
+- Qloo's data is partial: **no price for museums and most bookstores** (shown as unknown, never guessed); hours exist but are not displayed; atmosphere tags are missing for some places (the card says so). Ratings, phone numbers and photos are not shown.
+- "Indie" cannot be verified from Qloo's data; the app never claims a shop is independent (it ranks a few national chains lower when you ask for indie, by name).
+- Neighborhood search centers are approximate hand-entered coordinates, and neighborhood blurbs are illustrative; distances are straight-line from that center, not travel time.
+- Usage limits and the response cache are per server instance (in memory); the signing secret is shared across instances.
+- The planner is deterministic. No language model is used; the optional wording hook is off.
+- Suggestions are ideas, not events: nothing is booked, scheduled or confirmed.
+
+## Post-hackathon
+
+Ideas deliberately out of scope for this submission (plan §3): more cities and categories; a second restaurant cuisine beyond Korean; apartment/neighborhood
+comparison; opening hours and live availability; saving plans to an account or exporting to a calendar; an LLM wording layer (the guard is already in place);
+travel-time based distances; user-to-user or community features.
 
 ## License
 
 [MIT](LICENSE)
-
-## Post-hackathon ideas
-
-_(none recorded yet)_

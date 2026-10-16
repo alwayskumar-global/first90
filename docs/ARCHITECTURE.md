@@ -31,7 +31,7 @@ src/
       trace.ts         observable StepTrace recorder
   domain/schemas.ts    zod request schemas for the plan API
   lib/qloo/cache.ts    in-memory TTL cache (private, bounded, never written to disk)
-  server/              product API handlers (planApi), error mapping, per-visitor rate limiter, runtime wiring
+  server/              product API handlers (planApi), session signing (HMAC), usage limits + build gate, error mapping, runtime wiring
   app/api/plan         POST build (NDJSON step stream) / revise; app/api/interests POST resolve one interest
   lib/flow/            client state (reducer + localStorage), TasteInput builder, labels, API client
   screens/             Welcome, Location, Interests, Preferences, Building, Plan, PlaceDetail, ReplaceDialog
