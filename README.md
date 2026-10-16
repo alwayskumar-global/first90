@@ -4,10 +4,10 @@ Helps a newcomer build a life in a new city, one fitting routine at a time. It t
 into a staged, revisable local discovery plan (First Week, First Month, Months 2-3) grounded in real
 [Qloo](https://docs.qloo.com) place data. Built for the Qloo Agentic Hackathon.
 
-> **Status: Milestone 2 (agent workflow and plan engine).** The Qloo client, interest resolver, place normalizer,
-> planner, explanations and feedback/revision loop exist, are tested, and run against live Qloo data through
-> gated diagnostic routes. There is no product UI yet; `/` is a placeholder (the UI is Milestone 3, built from
-> supplied designs). See [docs/PLANNER.md](docs/PLANNER.md) and [docs/UI_IMPLEMENTATION_BRIEF.md](docs/UI_IMPLEMENTATION_BRIEF.md).
+> **Status: Milestone 3 (UI implementation), awaiting design-fidelity review.** The eight screens from the supplied
+> design (Welcome, Location, Interests, Preferences, Building, Plan, Place details, Replace) run on the real
+> plan engine and live Qloo data. See [docs/UI_IMPLEMENTATION_NOTES.md](docs/UI_IMPLEMENTATION_NOTES.md) for how the
+> design maps to the product and where it was adapted, [docs/PLANNER.md](docs/PLANNER.md) for the engine.
 
 ## Demo scope
 
@@ -43,6 +43,13 @@ pnpm dev
 | `pnpm test` | Vitest (no network; the Qloo client is tested with a fake `fetch`) |
 | `pnpm build` | Production build |
 | `pnpm check` | All of the above |
+
+## Using the app
+
+`pnpm dev`, open http://localhost:3000. The flow is Welcome -> Location -> Interests -> Preferences -> Building -> Plan.
+"Try a sample plan" prefills the demo persona. Everything stays in this browser (no accounts); "Start over" on the
+plan page clears it. Public API routes (`/api/plan`, `/api/interests`) are server-side, throttled per visitor, and never
+return the Qloo key.
 
 ## Live diagnostic (development)
 
