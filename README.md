@@ -4,8 +4,10 @@ Helps a newcomer build a life in a new city, one fitting routine at a time. It t
 into a staged, revisable local discovery plan (First Week, First Month, Months 2-3) grounded in real
 [Qloo](https://docs.qloo.com) place data. Built for the Qloo Agentic Hackathon.
 
-> **Status: Milestone 1 (engineering foundation).** The Qloo client, interest resolver and place normalizer
-> exist and are tested. There is no product UI yet; `/` is a placeholder.
+> **Status: Milestone 2 (agent workflow and plan engine).** The Qloo client, interest resolver, place normalizer,
+> planner, explanations and feedback/revision loop exist, are tested, and run against live Qloo data through
+> gated diagnostic routes. There is no product UI yet; `/` is a placeholder (the UI is Milestone 3, built from
+> supplied designs). See [docs/PLANNER.md](docs/PLANNER.md) and [docs/UI_IMPLEMENTATION_BRIEF.md](docs/UI_IMPLEMENTATION_BRIEF.md).
 
 ## Demo scope
 
@@ -52,6 +54,18 @@ curl 'localhost:3000/api/diagnostics/qloo?interest=ramen'         # interest res
 ```
 
 Categories: `cafe`, `bookstore`, `korean_restaurant`, `museum`. The response never contains the key.
+
+Plan engine (also development-only; add `DIAGNOSTICS_ENABLED=true` to expose it in production):
+
+```bash
+# Runs the live demo scenarios (baseline, changed interests/limits, feedback revisions, entity interest)
+# and returns a rubric report. ~30 paced Qloo requests; run it sparingly.
+curl 'localhost:3000/api/diagnostics/plan?scenarios=1'
+
+# Build a plan, then revise it
+curl -X POST localhost:3000/api/diagnostics/plan -H 'content-type: application/json' \
+  -d '{"action":"build","input":{"interests":["indie bookstores","Korean food","coffee shops","quiet mornings"],"areaKey":"raleigh-nc","radiusMeters":15000,"categories":["cafe","bookstore","korean_restaurant","museum"],"atmosphere":"no_preference","preferMornings":false}}'
+```
 
 ## Architecture
 

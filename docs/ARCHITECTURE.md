@@ -1,4 +1,4 @@
-# Architecture (Milestone 1)
+# Architecture (Milestones 1–2)
 
 ```
 src/
@@ -15,7 +15,24 @@ src/
       resolveInterests.ts   text -> tag candidates: resolved | ambiguous | unmatched
       discoverPlaces.ts     category + area (+ signals/constraints) -> PlaceCandidate[]
       normalizePlace.ts     raw record -> PlaceCandidate, or null if malformed
+    agent/
+      preferences.ts   "quiet mornings" -> atmosphere/routine preference (not a Qloo signal)
+      relevance.ts     off-category noise filter (primary_genre allow/deny lists)
+      constraints.ts   hard limits: exclusions, radius, price ceiling, strict quiet; out-of-limit flags
+      atmosphere.ts    quiet / lively / morning signals read from Qloo tags
+      scoring.ts       documented fit score + stable tie-break (see PLANNER.md)
+      planner.ts       diversity and three-stage assignment
+      explain.ts       grounded explanations; optional, validated LLM wording hook (off by default)
+      revise.ts        save / dismiss / replace + reason -> constraint, one-item revision
+      pipeline.ts      resolution summary, per-category Qloo queries, eligibility
+      workflow.ts      buildPlan / revisePlan with step traces
+      rubric.ts        handwritten acceptance rubric (grounding, diversity, constraints)
+      scenarios.ts     the live demo scenarios used for verification
+      trace.ts         observable StepTrace recorder
+  domain/schemas.ts    zod request schemas for the plan API
+  lib/qloo/cache.ts    in-memory TTL cache (private, bounded, never written to disk)
   app/api/diagnostics/qloo/route.ts   dev-only live check
+  app/api/diagnostics/plan/route.ts   dev-only plan engine (build / revise / scenarios)
 ```
 
 ## Rules the code enforces
@@ -44,7 +61,10 @@ src/
 - Museums return no price level; price limits cannot be checked for them.
 - Climbing venues were not found in Raleigh (dropped from the demo).
 
+- Tag signals return `query.affinity` but no explainability; entity signals return both.
+- Category tags are noisy; `primary_genre`, ambience, noise-level and time-of-day tags are reliable enough to filter and explain.
+- A burst of ~25 requests in a few seconds triggered a 429 on the event key; the diagnostic client paces requests (400 ms) and the workflow keeps at most two in flight.
+
 ## Not yet built (later milestones)
 
-Planner, explanations, revision loop (M2); UI from Kumar's designs (M3); hardening, rate limiting,
-deployment (M4).
+UI from Kumar's designs (M3); production API routes, usage throttling, signed sessions, deployment (M4).
