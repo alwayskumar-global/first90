@@ -12,7 +12,7 @@
  *    facts of its own.
  */
 
-import type { CategoryKey } from "./demo";
+import type { CategoryKey, CustomArea } from "./demo";
 
 // ---------------------------------------------------------------- inputs
 
@@ -30,6 +30,8 @@ export interface TasteInput {
   areaKey: string;
   /** Optional neighborhood anchor (see NEIGHBORHOODS); omitted = downtown Raleigh. */
   neighborhoodKey?: string;
+  /** CR-007: a searched place inside the demo bounds; takes the place of `neighborhoodKey`. */
+  customArea?: CustomArea;
   /** Hard distance limit in meters. Always explicit: Qloo returns nothing without it. */
   radiusMeters: number;
   categories: CategoryKey[];

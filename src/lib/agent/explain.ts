@@ -121,7 +121,7 @@ export async function explainCandidate(
   const distance = candidate.evidence.distanceMeters;
   const where =
     distance !== undefined
-      ? `${capitalize(category.noun)} about ${formatKm(distance)} from ${resolveCenter(ctx.input.neighborhoodKey).label}.`
+      ? `${capitalize(category.noun)} about ${formatKm(distance)} from ${resolveCenter(ctx.input.neighborhoodKey, ctx.input.customArea).label}.`
       : `${capitalize(category.noun)} in ${DEMO_AREA.label}.`;
   const { basis, sentence } = basisFor(candidate, ctx);
   const highlights = highlightsFor(candidate, ctx.input);

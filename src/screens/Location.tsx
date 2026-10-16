@@ -1,12 +1,16 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { SEARCH_SCOPES, type ScopeKey } from "@/domain/demo";
+import { DEMO_AREA, NEIGHBORHOODS, SEARCH_SCOPES, type ScopeKey } from "@/domain/demo";
 import { Icon } from "@/components/Icon";
 import { StepHeader, StepTitle, eyebrow } from "@/components/StepHeader";
 import { Button, Chip, StateBanner } from "@/components/ui";
+import { searchAreasRequest } from "@/lib/flow/api";
 import { useFlow } from "@/lib/flow/FlowProvider";
+import type { GeocodeResult } from "@/lib/geocode/photon";
+import { AreaIllustration } from "./AreaIllustration";
+import { AreaMap } from "./AreaMap";
 import { NEIGHBORHOOD_CARDS, SCOPE_CARDS, type NeighborhoodCard } from "./areaData";
 
 /** Arrow-key navigation inside a radio group, as in the design prototypes. */
@@ -34,50 +38,102 @@ export function Location() {
   const { state, dispatch } = useFlow();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const { neighborhoodKey, unsure } = state.area;
+  const { neighborhoodKey, custom, unsure } = state.area;
   const scope: ScopeKey = unsure && state.area.scope === "nearby" ? "city" : state.area.scope;
   const selected = NEIGHBORHOOD_CARDS.find((n) => n.key === neighborhoodKey) ?? null;
-  const [query, setQuery] = useState(selected?.name ?? "");
+  const selectedName = selected?.name ?? custom?.label ?? null;
+  const [query, setQuery] = useState(selectedName ?? "");
+  const [mapState, setMapState] = useState<"ready" | "fallback" | null>(null);
 
   const q = query.trim();
   const ql = q.toLowerCase();
-  const searching = !!q && !(selected && ql === selected.name.toLowerCase());
+  const searching = !!q && !(selectedName && ql === selectedName.toLowerCase());
+
+  // Live place search (CR-007): typed text goes to our /api/geocode, debounced. State is only set from async callbacks.
+  const remoteWanted = searching && q.length >= 2;
+  const [remote, setRemote] = useState<{ q: string; status: "ok" | "error"; results: GeocodeResult[] }>({ q: "", status: "ok", results: [] });
+  useEffect(() => {
+    if (!remoteWanted) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        setRemote({ q, status: "ok", results: await searchAreasRequest(q, controller.signal) });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setRemote({ q, status: "error", results: [] });
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [q, remoteWanted]);
+  const remoteState = remoteWanted && remote.q === q ? remote : null;
+  const loading = remoteWanted && !remoteState;
+
+  const curated = useMemo<NeighborhoodCard[]>(
+    () => (searching ? NEIGHBORHOOD_CARDS.filter((n) => `${n.name} ${n.tag}`.toLowerCase().includes(ql)) : []),
+    [searching, ql],
+  );
+  const searched = useMemo<GeocodeResult[]>(
+    () => (remoteState?.status === "ok" ? remoteState.results.filter((r) => !NEIGHBORHOOD_CARDS.some((n) => n.name.toLowerCase() === r.label.toLowerCase())) : []),
+    [remoteState],
+  );
+  const searchDown = searching && remoteState?.status === "error";
   const list = useMemo<NeighborhoodCard[]>(() => {
-    if (searching) return NEIGHBORHOOD_CARDS.filter((n) => `${n.name} ${n.tag}`.toLowerCase().includes(ql));
+    if (searching && !(searchDown && curated.length === 0)) return curated;
     const base = selected ? [selected, ...NEIGHBORHOOD_CARDS.filter((n) => n.key !== selected.key)] : NEIGHBORHOOD_CARDS;
     return base.slice(0, 4);
-  }, [searching, ql, selected]);
-  const noMatch = searching && list.length === 0;
-  const notReady = !selected && !unsure;
+  }, [searching, searchDown, curated, selected]);
+  const noMatch = searching && curated.length === 0 && remoteState?.status === "ok" && searched.length === 0;
+  const notReady = !selectedName && !unsure;
 
   const pick = (card: NeighborhoodCard) => {
     dispatch({ type: "setNeighborhood", key: card.key });
     setQuery(card.name);
   };
+  const pickSearched = (result: GeocodeResult) => {
+    dispatch({ type: "setCustomArea", area: { lat: result.lat, lon: result.lon, label: result.label } });
+    setQuery(result.label);
+  };
   const focusInput = () => setTimeout(() => inputRef.current?.focus(), 0);
 
-  const cx = selected ? selected.x : 200;
-  const cy = selected ? selected.y : 215;
-  const hasArea = !!selected || unsure;
+  const pinPoint = useMemo(() => {
+    if (selected) return { lat: NEIGHBORHOODS[selected.key].lat, lon: NEIGHBORHOODS[selected.key].lon, label: selected.name };
+    if (custom) return { lat: custom.lat, lon: custom.lon, label: custom.label };
+    return null;
+  }, [selected, custom]);
+  const radiusMeters = SEARCH_SCOPES[scope].radiusMeters;
+  const ringPoint = useMemo(() => {
+    if (pinPoint) return { lat: pinPoint.lat, lon: pinPoint.lon, radiusMeters };
+    if (unsure) return { lat: DEMO_AREA.center.lat, lon: DEMO_AREA.center.lon, radiusMeters };
+    return null;
+  }, [pinPoint, unsure, radiusMeters]);
+
+  // Position on the simplified illustration (about 13 px per km around downtown), used only as the map fallback.
+  const clamp = (v: number) => Math.max(60, Math.min(340, v));
+  const cx = selected ? selected.x : custom ? clamp(200 + (custom.lon - DEMO_AREA.center.lon) * Math.cos((DEMO_AREA.center.lat * Math.PI) / 180) * 111.32 * 13) : 200;
+  const cy = selected ? selected.y : custom ? clamp(215 - (custom.lat - DEMO_AREA.center.lat) * 110.57 * 13) : 215;
+  const hasArea = !!selectedName || unsure;
   let mapTitle = "Raleigh";
   let mapChip = "Pick an area";
   let mapBody = "Choose a neighborhood and we’ll show the area we’ll start from.";
-  if (selected) {
-    mapTitle = `${selected.name} focus`;
+  if (selectedName) {
+    mapTitle = `${selectedName} focus`;
     mapChip = scope === "nearby" ? "Close-by focus" : scope === "city" ? "Across the city" : "Close, with room to stretch";
     mapBody =
       scope === "nearby"
-        ? `We’ll focus on places close to ${selected.name}.`
+        ? `We’ll focus on places close to ${selectedName}.`
         : scope === "city"
-          ? `We’ll look across Raleigh, beginning from ${selected.name}.`
-          : `We’ll lean close to ${selected.name}, and look further out when a place fits.`;
+          ? `We’ll look across Raleigh, beginning from ${selectedName}.`
+          : `We’ll lean close to ${selectedName}, and look further out when a place fits.`;
   } else if (unsure) {
     mapTitle = "All of Raleigh";
     mapChip = "City-wide start";
     mapBody = scope === "flexible" ? "We’ll start across the city and narrow in as you tell us more." : "We’ll start across the city. You can pick a neighborhood anytime.";
   }
-  const statusText = selected
-    ? `Ready: ${selected.name} • Selected for your first recommendations`
+  const statusText = selectedName
+    ? `Ready: ${selectedName} • Selected for your first recommendations`
     : unsure
       ? "Ready: All of Raleigh • You can narrow in anytime"
       : "Choose a neighborhood, or “I’m not sure yet”, to continue.";
@@ -87,6 +143,19 @@ export function Location() {
     border: on ? "1.5px solid var(--evergreen-500)" : "1.5px solid transparent",
     background: on ? "var(--stone-100)" : "var(--bg-raised)", boxShadow: on ? "none" : "var(--shadow-1)",
   });
+
+  const renderSearched = (r: { label: string; detail: string; lat: number; lon: number }) => {
+    const on = !!custom && custom.lat === r.lat && custom.lon === r.lon && !unsure;
+    return (
+      <button key={`${r.label}|${r.lat}|${r.lon}`} type="button" role="radio" aria-checked={on} className="f90-radio-card f90-focusable" onClick={() => pickSearched(r)} onKeyDown={onGroupKey} style={rowCard(on)}>
+        <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ font: "500 16px/1.3 var(--font-sans)" }}>{r.label}</span>
+          {r.detail ? <span style={{ font: "400 14px/1.45 var(--font-sans)", color: "var(--text-secondary)" }}>{r.detail}</span> : null}
+        </span>
+        {radioDot(on, 22)}
+      </button>
+    );
+  };
 
   return (
     <div className="f90-page">
@@ -156,6 +225,7 @@ export function Location() {
               </div>
 
               <div role="radiogroup" aria-label="Neighborhood" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {custom && !unsure && !searching ? renderSearched({ ...custom, label: custom.label, detail: "Searched place" }) : null}
                 {list.map((n) => {
                   const on = n.key === neighborhoodKey && !unsure;
                   return (
@@ -171,6 +241,7 @@ export function Location() {
                     </button>
                   );
                 })}
+                {searched.map(renderSearched)}
                 <button
                   type="button"
                   role="radio"
@@ -194,9 +265,15 @@ export function Location() {
                 </button>
               </div>
 
+              {loading ? <p role="status" style={{ margin: 0, font: "400 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>Searching Raleigh…</p> : null}
+              {searchDown ? (
+                <p role="status" style={{ margin: 0, font: "400 13px/1.45 var(--font-sans)", color: "var(--text-secondary)" }}>
+                  Live place search isn’t available right now. You can still pick one of our areas, or start from all of Raleigh.
+                </p>
+              ) : null}
               {noMatch ? (
                 <StateBanner tone="empty" icon="search" title={`No area found for “${q}”`}>
-                  <p className="f90-state__body">This demo covers Raleigh only. Check the spelling, try one of these areas, or start from all of Raleigh.</p>
+                  <p className="f90-state__body">This demo covers the Raleigh area only. Check the spelling, try one of these areas, or start from all of Raleigh.</p>
                   <div className="f90-chips">
                     {(["downtown", "five-points", "cameron"] as const).map((key) => {
                       const card = NEIGHBORHOOD_CARDS.find((n) => n.key === key)!;
@@ -209,7 +286,9 @@ export function Location() {
                   </div>
                 </StateBanner>
               ) : null}
-              <div style={{ font: "400 12px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>Neighborhood notes are illustrative for this demo.</div>
+              <div style={{ font: "400 12px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>
+                Neighborhood notes are illustrative for this demo. Typed searches go through our server to Photon (data © OpenStreetMap contributors) and are not stored; the map loads from OpenFreeMap.
+              </div>
             </div>
 
             <fieldset style={{ border: 0, margin: "36px 0 0", padding: 0, minWidth: 0 }}>
@@ -278,19 +357,22 @@ export function Location() {
                 <span style={{ font: "500 12px/1 var(--font-sans)", color: "var(--text-secondary)", background: "var(--ivory-200)", padding: "7px 12px", borderRadius: 999, whiteSpace: "nowrap" }}>Raleigh, NC</span>
               </div>
               <div style={{ position: "relative", marginTop: 16, borderRadius: 14, overflow: "hidden", background: "var(--ivory-200)" }}>
-                <AreaMap cx={cx} cy={cy} hasSel={!!selected} city={scope === "city" && hasArea} near={!!selected && scope !== "city"} flex={!!selected && scope === "flexible"} />
-                {selected ? (
-                  <span style={{ position: "absolute", left: `${(cx / 400) * 100}%`, top: `${((cy - 20 - 28) / 400) * 100}%`, transform: "translate(-50%,-100%)", padding: "6px 12px", borderRadius: 999, background: "var(--ink-900)", color: "var(--ivory-100)", font: "600 13px/1.2 var(--font-sans)", whiteSpace: "nowrap", boxShadow: "var(--shadow-2)" }}>
-                    {selected.name}
-                  </span>
-                ) : null}
+                <AreaMap
+                  pin={pinPoint}
+                  ring={ringPoint}
+                  description={`Map of ${mapTitle}. ${mapBody}`}
+                  onStateChange={setMapState}
+                  fallback={<AreaIllustration cx={cx} cy={cy} label={pinPoint?.label ?? null} city={scope === "city" && hasArea} near={!!pinPoint && scope !== "city"} flex={!!pinPoint && scope === "flexible"} />}
+                />
                 <span style={{ position: "absolute", left: 12, bottom: 12, display: "inline-flex", alignItems: "center", gap: 8, background: "var(--bg-raised)", padding: "7px 12px", borderRadius: 8, font: "500 13px/1 var(--font-sans)", boxShadow: "var(--shadow-1)" }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--evergreen-500)" }} />
                   {mapChip}
                 </span>
               </div>
               <p style={{ margin: "16px 0 0", font: "400 14px/1.55 var(--font-sans)", color: "var(--text-secondary)" }}>{mapBody}</p>
-              <p style={{ margin: "8px 0 0", font: "400 12px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>Simplified illustration. Not a verified map.</p>
+              <p style={{ margin: "8px 0 0", font: "400 12px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>
+                {mapState === "ready" ? "Map © OpenStreetMap contributors, tiles by OpenFreeMap. The dashed circle is your distance limit." : "Simplified illustration. Not a verified map."}
+              </p>
             </div>
 
             <div className="f90-wide-only">
@@ -327,36 +409,5 @@ export function Location() {
         </div>
       </main>
     </div>
-  );
-}
-
-function AreaMap({ cx, cy, hasSel, city, near, flex }: { cx: number; cy: number; hasSel: boolean; city: boolean; near: boolean; flex: boolean }) {
-  const outline = "M60 120C80 50 190 30 270 50C350 70 380 150 360 240C345 330 300 400 210 410C120 420 50 360 40 270C35 210 45 170 60 120Z";
-  return (
-    <svg viewBox="0 20 400 400" width="100%" style={{ display: "block" }} aria-hidden="true" focusable="false">
-      <defs><clipPath id="cityclip"><path d={outline} /></clipPath></defs>
-      <rect y="0" width="400" height="440" fill="#EFEDE4" />
-      <path d={outline} fill="#FCFBF8" />
-      <g style={{ clipPath: "url(#cityclip)" }}>
-        {city ? <rect width="400" height="440" fill="#EAF3F0" /> : null}
-        {flex ? <circle cx={cx} cy={cy} r="128" fill="#EAF3F0" stroke="#2E7064" style={{ strokeWidth: 1.5, strokeDasharray: "6 6" }} /> : null}
-        {near ? <circle cx={cx} cy={cy} r="66" fill="#D3E6E0" stroke="#2E7064" style={{ strokeWidth: 2 }} /> : null}
-        <g transform="rotate(-14 200 220)" fill="none" style={{ stroke: "#DDD9CC", strokeWidth: 2 }}>
-          <path d="M-80 20H480M-80 64H480M-80 108H480M-80 152H480M-80 196H480M-80 240H480M-80 284H480M-80 328H480M-80 372H480M-80 416H480M-80 460H480" />
-          <path d="M-20 -80V520M28 -80V520M76 -80V520M124 -80V520M172 -80V520M220 -80V520M268 -80V520M316 -80V520M364 -80V520M412 -80V520" />
-        </g>
-        <g transform="rotate(-14 200 220)" fill="none" style={{ stroke: "#C7C2B2", strokeWidth: 5, strokeLinecap: "round" }}><path d="M-80 240H480M220 -80V520" /></g>
-        <path d="M262 286h62a14 14 0 0 1 14 14v34a14 14 0 0 1-14 14h-62a14 14 0 0 1-14-14v-34a14 14 0 0 1 14-14z" fill="#A9CCC3" />
-        <path d="M70 330C120 300 150 340 200 320S270 250 330 190" fill="none" style={{ stroke: "#A9CCC3", strokeWidth: 7, strokeLinecap: "round" }} />
-        <path d="M90 110h46a10 10 0 0 1 10 10v26a10 10 0 0 1-10 10H90a10 10 0 0 1-10-10v-26a10 10 0 0 1 10-10z" fill="#A9CCC3" />
-      </g>
-      <path d={outline} fill="none" stroke="#858170" style={{ strokeWidth: 1.5 }} />
-      {hasSel ? (
-        <g transform={`translate(${cx} ${cy})`}>
-          <circle r="10" fill="#FCFBF8" stroke="#1D4740" style={{ strokeWidth: 3.5 }} />
-          <circle r="3.5" fill="#1D4740" />
-        </g>
-      ) : null}
-    </svg>
   );
 }

@@ -1,4 +1,4 @@
-import { CATEGORIES, CATEGORY_KEYS, DEMO_AREA, isNeighborhoodKey, resolveCenter } from "@/domain/demo";
+import { CATEGORIES, CATEGORY_KEYS, DEMO_AREA, isInDemoBounds, isNeighborhoodKey, resolveCenter } from "@/domain/demo";
 import {
   STAGE_KEYS,
   type CategoryCoverage,
@@ -46,6 +46,10 @@ export function validateTasteInput(input: TasteInput): void {
   };
   if (input.areaKey !== DEMO_AREA.key) bad(`Only ${DEMO_AREA.label} is supported.`);
   if (input.neighborhoodKey !== undefined && !isNeighborhoodKey(input.neighborhoodKey)) bad("Unknown neighborhood.");
+  if (input.customArea !== undefined) {
+    if (input.neighborhoodKey !== undefined) bad("Choose a neighborhood or a searched place, not both.");
+    if (!isInDemoBounds(input.customArea.lat, input.customArea.lon)) bad("That place is outside the Raleigh demo area.");
+  }
   const interests = input.interests.map((value) => value.trim()).filter(Boolean);
   if (interests.length < 1 || interests.length > 5) bad("Provide between 1 and 5 interests.");
   if (input.categories.length < 1 || input.categories.some((key) => !CATEGORY_KEYS.includes(key))) {
@@ -98,7 +102,7 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
       loadPool(client, {
         categories: input.categories,
         signals: summary.signals,
-        center: resolveCenter(input.neighborhoodKey).center,
+        center: resolveCenter(input.neighborhoodKey, input.customArea).center,
         queryRadiusMeters: input.radiusMeters,
         ...(queryMaxPriceLevel !== undefined ? { queryMaxPriceLevel } : {}),
       }),
@@ -245,7 +249,7 @@ export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedb
     "revise",
     async () => {
       if (feedback.action === "save") return reviseWithPool({ session, feedback, pool: [], wording });
-      const center = resolveCenter(plan.input.neighborhoodKey).center;
+      const center = resolveCenter(plan.input.neighborhoodKey, plan.input.customArea).center;
       const pool = await loadPool(client, {
         categories: plan.input.categories,
         signals: session.signals,

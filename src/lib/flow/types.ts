@@ -1,4 +1,4 @@
-import type { CategoryKey, NeighborhoodKey, ScopeKey } from "@/domain/demo";
+import type { CategoryKey, CustomArea, NeighborhoodKey, ScopeKey } from "@/domain/demo";
 import type { PlanSession } from "@/domain/types";
 
 export type RoutineId = "work" | "meals" | "weekend" | "arts";
@@ -22,7 +22,8 @@ export interface Anchor {
 
 export interface FlowState {
   hydrated: boolean;
-  area: { neighborhoodKey: NeighborhoodKey | null; unsure: boolean; scope: ScopeKey };
+  /** `custom` (CR-007) is a searched place; it excludes a curated neighborhood. */
+  area: { neighborhoodKey: NeighborhoodKey | null; custom: CustomArea | null; unsure: boolean; scope: ScopeKey };
   anchors: Anchor[];
   prefs: {
     routines: RoutineId[];

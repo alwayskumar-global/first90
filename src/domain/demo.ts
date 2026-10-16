@@ -16,6 +16,22 @@ export const DEMO_AREA = {
   maxRadiusMeters: 50_000,
 } as const;
 
+/**
+ * CR-007: searched places are accepted only inside this box around Raleigh and the rest of Wake County's core.
+ * It bounds the geocoder query and is re-checked on the server for every plan.
+ */
+export const DEMO_BOUNDS = { minLat: 35.55, maxLat: 36.05, minLon: -79.0, maxLon: -78.25 } as const;
+
+export interface CustomArea {
+  lat: number;
+  lon: number;
+  /** Short place name from the geocoder, used in "about 2.3 km from ...". */
+  label: string;
+}
+
+export const isInDemoBounds = (lat: number, lon: number): boolean =>
+  lat >= DEMO_BOUNDS.minLat && lat <= DEMO_BOUNDS.maxLat && lon >= DEMO_BOUNDS.minLon && lon <= DEMO_BOUNDS.maxLon;
+
 export const CATEGORY_KEYS = ["cafe", "bookstore", "korean_restaurant", "museum"] as const;
 export type CategoryKey = (typeof CATEGORY_KEYS)[number];
 
@@ -145,8 +161,15 @@ export const SEARCH_SCOPES = {
 } as const;
 export type ScopeKey = keyof typeof SEARCH_SCOPES;
 
-/** Search center and the name used in "about 2.3 km from ..." for a chosen neighborhood (or downtown). */
-export function resolveCenter(neighborhoodKey?: string): { center: { lat: number; lon: number }; label: string } {
+/**
+ * Search center and the name used in "about 2.3 km from ..." for a searched place (CR-007), a chosen
+ * neighborhood, or downtown.
+ */
+export function resolveCenter(
+  neighborhoodKey?: string,
+  customArea?: CustomArea,
+): { center: { lat: number; lon: number }; label: string } {
+  if (customArea) return { center: { lat: customArea.lat, lon: customArea.lon }, label: customArea.label };
   if (neighborhoodKey && isNeighborhoodKey(neighborhoodKey)) {
     const n = NEIGHBORHOODS[neighborhoodKey];
     return { center: { lat: n.lat, lon: n.lon }, label: neighborhoodKey === "downtown" ? "downtown Raleigh" : n.name };

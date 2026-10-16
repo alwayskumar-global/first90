@@ -9,6 +9,8 @@ export interface Limits {
   build: RateLimiter;
   revise: RateLimiter;
   interests: RateLimiter;
+  /** Area search (CR-007): cheap, but it calls a free third-party geocoder. */
+  geocode: RateLimiter;
   /** Across all visitors, so one busy minute cannot spend the event key's request budget. */
   globalBuild: RateLimiter;
   globalLookups: RateLimiter;
@@ -26,6 +28,7 @@ export function createLimits(env: Record<string, string | undefined> = process.e
     build: createRateLimiter({ limit: int(env.RATE_LIMIT_BUILDS_PER_MIN, 6), windowMs }),
     revise: createRateLimiter({ limit: int(env.RATE_LIMIT_REVISIONS_PER_MIN, 20), windowMs }),
     interests: createRateLimiter({ limit: int(env.RATE_LIMIT_LOOKUPS_PER_MIN, 40), windowMs }),
+    geocode: createRateLimiter({ limit: int(env.RATE_LIMIT_GEOCODE_PER_MIN, 60), windowMs }),
     globalBuild: createRateLimiter({ limit: int(env.RATE_LIMIT_GLOBAL_BUILDS_PER_MIN, 40), windowMs }),
     globalLookups: createRateLimiter({ limit: int(env.RATE_LIMIT_GLOBAL_LOOKUPS_PER_MIN, 200), windowMs }),
     maxConcurrentBuilds: int(env.MAX_CONCURRENT_BUILDS, 4),

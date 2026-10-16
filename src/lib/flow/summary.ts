@@ -20,7 +20,8 @@ export const BUDGET_CARDS: { id: BudgetChoice; title: string }[] = [
 ];
 
 export function areaText(state: Pick<FlowState, "area">, short = false): string {
-  const { neighborhoodKey, unsure } = state.area;
+  const { neighborhoodKey, custom, unsure } = state.area;
+  if (custom && !unsure) return short ? custom.label : `${custom.label}, Raleigh area`;
   if (neighborhoodKey && !unsure) return short ? NEIGHBORHOODS[neighborhoodKey].name : `${NEIGHBORHOODS[neighborhoodKey].name}, Raleigh`;
   return short ? "Raleigh" : "All of Raleigh, NC";
 }

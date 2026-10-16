@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CATEGORY_KEYS, NEIGHBORHOOD_KEYS } from "./demo";
+import { CATEGORY_KEYS, DEMO_BOUNDS, NEIGHBORHOOD_KEYS } from "./demo";
 import { FEEDBACK_REASONS, STAGE_KEYS } from "./types";
 import type { Feedback, PlanSession, TasteInput } from "./types";
 
@@ -13,18 +13,32 @@ const categoryKey = z.enum(CATEGORY_KEYS);
 const stageKey = z.enum(STAGE_KEYS as [string, ...string[]]);
 const reason = z.enum(FEEDBACK_REASONS as [string, ...string[]]);
 
+/** A place chosen from geocoder search. Bounds and label are re-validated here; the label ends up in plan text. */
+export const customAreaSchema = z.object({
+  lat: z.number().min(DEMO_BOUNDS.minLat).max(DEMO_BOUNDS.maxLat),
+  lon: z.number().min(DEMO_BOUNDS.minLon).max(DEMO_BOUNDS.maxLon),
+  label: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[^\u0000-\u001f\u007f<>]+$/),
+});
+
 export const tasteInputSchema = z.object({
   interests: z.array(z.string().trim().min(1).max(80)).min(1).max(5),
   confirmations: z.record(z.string(), z.string().max(200)).optional(),
   areaKey: z.string().max(40),
   neighborhoodKey: z.enum(NEIGHBORHOOD_KEYS as [string, ...string[]]).optional(),
+  customArea: customAreaSchema.optional(),
   radiusMeters: z.number().min(1_000).max(50_000),
   categories: z.array(categoryKey).min(1).max(4),
   maxPriceLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),
   atmosphere: z.enum(["quiet", "lively", "no_preference"]),
   preferMornings: z.boolean(),
   strictQuiet: z.boolean().optional(),
-}) satisfies z.ZodType<TasteInput>;
+})
+  .refine((input) => !(input.customArea && input.neighborhoodKey), { message: "Choose a neighborhood or a searched place, not both.", path: ["customArea"] }) satisfies z.ZodType<TasteInput>;
 
 export const feedbackSchema = z.object({
   itemId: z.string().max(100),

@@ -1,4 +1,4 @@
-import { CATEGORIES, DEMO_PERSONA, type NeighborhoodKey, type ScopeKey } from "@/domain/demo";
+import { CATEGORIES, DEMO_PERSONA, type CustomArea, type NeighborhoodKey, type ScopeKey } from "@/domain/demo";
 import { setSaved } from "@/domain/session";
 import type { PlanSession } from "@/domain/types";
 import { anchorFromMatch, anchorFromPreference } from "./labels";
@@ -8,7 +8,7 @@ export const MAX_ANCHORS = 5;
 
 export const initialState: FlowState = {
   hydrated: false,
-  area: { neighborhoodKey: null, unsure: false, scope: "nearby" },
+  area: { neighborhoodKey: null, custom: null, unsure: false, scope: "nearby" },
   anchors: [],
   prefs: { routines: [], atmosphere: null, budget: null, skipped: { routines: false, atmosphere: false, budget: false } },
   session: null,
@@ -21,6 +21,7 @@ export const initialState: FlowState = {
 export type FlowAction =
   | { type: "hydrate"; state: FlowState | null }
   | { type: "setNeighborhood"; key: NeighborhoodKey }
+  | { type: "setCustomArea"; area: CustomArea }
   | { type: "setUnsure" }
   | { type: "clearArea" }
   | { type: "setScope"; scope: ScopeKey }
@@ -56,14 +57,19 @@ export function sampleAnchors(): Anchor[] {
 
 export function flowReducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
-    case "hydrate":
-      return { ...(action.state ?? state), hydrated: true };
+    case "hydrate": {
+      const saved = action.state;
+      // State saved before CR-007 has no `custom`; fill it in.
+      return { ...(saved ? { ...saved, area: { ...saved.area, custom: saved.area.custom ?? null } } : state), hydrated: true };
+    }
     case "setNeighborhood":
-      return invalidatePlan({ ...state, area: { ...state.area, neighborhoodKey: action.key, unsure: false } });
+      return invalidatePlan({ ...state, area: { ...state.area, neighborhoodKey: action.key, custom: null, unsure: false } });
+    case "setCustomArea":
+      return invalidatePlan({ ...state, area: { ...state.area, neighborhoodKey: null, custom: action.area, unsure: false } });
     case "setUnsure":
-      return invalidatePlan({ ...state, area: { neighborhoodKey: null, unsure: true, scope: state.area.scope === "nearby" ? "city" : state.area.scope } });
+      return invalidatePlan({ ...state, area: { neighborhoodKey: null, custom: null, unsure: true, scope: state.area.scope === "nearby" ? "city" : state.area.scope } });
     case "clearArea":
-      return invalidatePlan({ ...state, area: { ...state.area, neighborhoodKey: null, unsure: false } });
+      return invalidatePlan({ ...state, area: { ...state.area, neighborhoodKey: null, custom: null, unsure: false } });
     case "setScope":
       return invalidatePlan({ ...state, area: { ...state.area, scope: action.scope } });
     case "addAnchor": {
@@ -94,7 +100,7 @@ export function flowReducer(state: FlowState, action: FlowAction): FlowState {
       return {
         ...initialState,
         hydrated: true,
-        area: { neighborhoodKey: null, unsure: true, scope: "city" },
+        area: { neighborhoodKey: null, custom: null, unsure: true, scope: "city" },
         anchors: sampleAnchors(),
       };
     case "setSession":

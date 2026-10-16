@@ -1,3 +1,4 @@
+import type { GeocodeResult } from "@/lib/geocode/photon";
 import type { Feedback, PlanRevision, PlanSession, ResolvedInterest, TasteInput } from "@/domain/types";
 import type { StepTrace } from "@/lib/agent/trace";
 
@@ -110,4 +111,17 @@ export async function resolveInterestRequest(text: string, signal?: AbortSignal)
   }
   if (!response.ok) throw await parseError(response);
   return ((await response.json()) as { resolved: ResolvedInterest }).resolved;
+}
+
+/** Search places inside the demo area (CR-007). Throws ApiError with kind "geocoder_unavailable" when search is down. */
+export async function searchAreasRequest(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`, signal ? { signal } : {});
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    throw new ApiError({ error: "We couldn't reach the server.", kind: "network", retryable: true });
+  }
+  if (!response.ok) throw await parseError(response);
+  return ((await response.json()) as { results: GeocodeResult[] }).results;
 }

@@ -1,9 +1,32 @@
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test as base, type APIRequestContext, type Page } from "@playwright/test";
+
+export { expect };
 
 export const MOCK = "http://127.0.0.1:4010";
 
+/** Map tiles come from a third-party host the tests must not depend on: answer its requests with an empty style. */
+export const TILES_URL = "https://tiles.openfreemap.org/**";
+export async function stubTiles(page: Page) {
+  await page.route(TILES_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "access-control-allow-origin": "*" },
+      body: JSON.stringify({ version: 8, name: "e2e", sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#efede4" } }] }),
+    }),
+  );
+}
+
+/** `test` with the tile host stubbed for every page. */
+export const test = base.extend<{ stubbedTiles: void }>({
+  stubbedTiles: [async ({ page }, use) => { await stubTiles(page); await use(); }, { auto: true }],
+});
+
+export const lastQloo = async (request: APIRequestContext) =>
+  (await (await request.get(`${MOCK}/__last`)).json()) as { lastLocation: { point: string; radius: string } | null; geoQueries: string[] };
+
 export const resetMock = (request: APIRequestContext) => request.get(`${MOCK}/__reset`);
-export const setMode = (request: APIRequestContext, body: { mode: string; ids?: string[] }) => request.post(`${MOCK}/__mode`, { data: body });
+export const setMode = (request: APIRequestContext, body: { mode?: string; ids?: string[]; geo?: string }) => request.post(`${MOCK}/__mode`, { data: body });
 export const served = async (request: APIRequestContext) =>
   (await (await request.get(`${MOCK}/__served`)).json()) as Record<string, { name: string; address: string; price: number | null; website: string | null; distance: number }>;
 

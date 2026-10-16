@@ -33,6 +33,8 @@ src/
   lib/qloo/cache.ts    in-memory TTL cache (private, bounded, never written to disk)
   server/              product API handlers (planApi), session signing (HMAC), usage limits + build gate, error mapping, runtime wiring
   app/api/plan         POST build (NDJSON step stream) / revise; app/api/interests POST resolve one interest
+  app/api/geocode      GET place search for the Location step (server proxy to Photon, cached, throttled; CR-007)
+  lib/geocode/         Photon client + response normalizer (named places inside the Raleigh bounding box only)
   lib/flow/            client state (reducer + localStorage), TasteInput builder, labels, API client
   screens/             Welcome, Location, Interests, Preferences, Building, Plan, PlaceDetail, ReplaceDialog
   components/          Icon (Lucide), Button, Badge, Chip, StageNav, StateBanner

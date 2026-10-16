@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
-import { buildFromInterests, resetMock, startSample } from "./helpers";
+import type { Page } from "@playwright/test";
+import { buildFromInterests, expect, resetMock, startSample, test } from "./helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await resetMock(request);
@@ -8,7 +8,8 @@ test.beforeEach(async ({ page, request }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 
-async function scan(page: Page, label: string) {
+async function scan(page: Page, label: string, title: RegExp = /First 90 Days/) {
+  await expect(page).toHaveTitle(title); // the title streams in after a client-side navigation; scan the settled page
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`);
   expect(summary, `${label} has WCAG violations`).toEqual([]);
@@ -18,11 +19,21 @@ test("every screen passes automated WCAG 2.2 AA checks (axe)", async ({ page }) 
   await page.goto("/");
   await scan(page, "Welcome");
   await page.getByRole("button", { name: "Build my plan" }).click();
-  await scan(page, "Location");
+  await scan(page, "Location", /Choose your location/);
   await page.getByRole("radio", { name: /Five Points/ }).click();
-  await scan(page, "Location (selected)");
+  await expect(page.locator("[data-map-state=ready]")).toBeVisible();
+  await scan(page, "Location (selected, map ready)");
+  await page.getByRole("textbox", { name: /Neighborhood or area/ }).fill("hillsborough");
+  await expect(page.getByRole("radio", { name: /Hillsborough Street Lofts/ })).toBeVisible();
+  // centre the results so the phone layout's fixed Continue bar is not drawn over them while scanning
+  await page.getByRole("radio", { name: /Hillsborough Street Lofts/ }).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await scan(page, "Location (search results)");
+  await page.getByRole("radio", { name: /Hillsborough Street Lofts/ }).click();
+  await expect(page.locator(".maplibregl-marker")).toBeVisible();
+  await scan(page, "Location (searched place on map)");
   await page.getByRole("button", { name: "Continue" }).click();
-  await scan(page, "Interests (empty)");
+  await expect(page).toHaveURL(/\/interests$/);
+  await scan(page, "Interests (empty)", /Your interests/);
 
   await startSample(page);
   await scan(page, "Interests");
@@ -36,7 +47,7 @@ test("every screen passes automated WCAG 2.2 AA checks (axe)", async ({ page }) 
 
   await buildFromInterests(page);
   await expect(page).toHaveURL(/\/plan$/, { timeout: 45_000 });
-  await scan(page, "Plan");
+  await scan(page, "Plan", /Your plan/);
   await page.getByRole("button", { name: /^View details for / }).first().click();
   await scan(page, "Plan (details open)");
   await page.getByRole("button", { name: /^Replace / }).first().click();
@@ -44,5 +55,5 @@ test("every screen passes automated WCAG 2.2 AA checks (axe)", async ({ page }) 
   await page.getByRole("button", { name: "Keep this suggestion", exact: true }).click();
   await page.getByRole("button", { name: /^See full details for / }).first().click();
   await expect(page).toHaveURL(/\/plan\/item/);
-  await scan(page, "Place details");
+  await scan(page, "Place details", /Place details/);
 });

@@ -58,3 +58,6 @@ docs/PROJECT_PLAN.md
 docs/DEVPOST_SUBMISSION.md
 docs/UI_IMPLEMENTATION_BRIEF.md
 docs/UI_IMPLEMENTATION_NOTES.md
+
+# copied from node_modules by scripts/copy-maplibre-worker.mjs
+/public/maplibre/

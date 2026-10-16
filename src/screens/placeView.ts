@@ -27,7 +27,7 @@ export const BASIS_LABEL: Record<ExplanationBasis, string> = {
 };
 
 export function areaLabelOf(session: PlanSession): string {
-  return resolveCenter(session.plan.input.neighborhoodKey).label;
+  return resolveCenter(session.plan.input.neighborhoodKey, session.plan.input.customArea).label;
 }
 
 /** "0.2 km from Five Points" (Qloo's distance from the search center). */

@@ -100,9 +100,10 @@ pnpm dev                        # http://localhost:3000  ("Try a sample plan" pr
 |---|---|---|
 | `QLOO_API_KEY` | yes | Event-issued Qloo key. Server-side only; never `NEXT_PUBLIC_`; never committed. |
 | `SESSION_SECRET` | recommended | ≥ 16 chars. Signs plan sessions so tampered ones are rejected. If unset, a signing key is derived from `QLOO_API_KEY`. `openssl rand -hex 32` |
+| `GEOCODER_BASE_URL` | no | Place-search service for the Location step. Default `https://photon.komoot.io` (Photon, OpenStreetMap data, no key). Needs no secret. |
 | `QLOO_BASE_URL` | no | Default `https://hackathon.api.qloo.com`. (`http://127.0.0.1:…` is allowed only for the local test mock.) |
 | `DIAGNOSTICS_ENABLED` | no | `true` exposes `/api/diagnostics/*` in production. Leave unset. They are always on in development. |
-| `RATE_LIMIT_*`, `MAX_CONCURRENT_BUILDS`, `QLOO_CACHE_TTL_SECONDS` | no | Usage protection and cache tuning, see `.env.example`. |
+| `RATE_LIMIT_*`, `MAX_CONCURRENT_BUILDS`, `QLOO_CACHE_TTL_SECONDS`, `GEOCODER_CACHE_TTL_SECONDS` | no | Usage protection and cache tuning, see `.env.example`. |
 
 > **Hackathon credentials expire after judging.** Running this project afterwards needs a new, authorized Qloo API key (and, as the
 > hackathon key is not valid on staging/production hosts, possibly a different `QLOO_BASE_URL`).
@@ -113,7 +114,7 @@ pnpm dev                        # http://localhost:3000  ("Try a sample plan" pr
 |---|---|
 | `pnpm typecheck` · `pnpm lint` | strict TypeScript; ESLint |
 | `pnpm test` | unit tests (Vitest): client, validation, noise filter, planner, explanations, revision, signing, throttling |
-| `pnpm e2e` | production build + Playwright on desktop (1280×800, 1440×900) and phone (375×812) against a **local mock of Qloo** (synthetic data): primary flow, save/replace/undo, refresh persistence, 429, outage, empty data, no key (503), throttling, tampered sessions, grounding and wording audits, axe WCAG 2.2 AA scan of every screen |
+| `pnpm e2e` | production build + Playwright on desktop (1280×800, 1440×900) and phone (375×812) against a **local mock of Qloo** (synthetic data): primary flow, real map and place search (with search-down and tiles-blocked fallbacks), save/replace/undo, refresh persistence, 429, outage, empty data, no key (503), throttling, tampered sessions, grounding and wording audits, axe WCAG 2.2 AA scan of every screen |
 | `pnpm audit:secrets` | the key is not in git history, tracked files, or the client bundle; no env files or bulk data tracked |
 | `pnpm audit:live` | with a running app and a real key: rebuilds the plan, repeats the Qloo request, and checks every place's name, address, price level, website, distance and tags against Qloo's fresh response |
 
@@ -121,7 +122,8 @@ pnpm dev                        # http://localhost:3000  ("Try a sample plan" pr
 
 ```
 Browser (React, no accounts; answers + plan kept in localStorage)
-  └─ /api/plan  (build: NDJSON step stream · revise)     /api/interests (resolve one interest)
+  ├─ map tiles: OpenFreeMap (MapLibre GL, loaded by the browser)
+  └─ /api/plan  (build: NDJSON step stream · revise)   /api/interests (resolve one interest)   /api/geocode (place search → Photon)
         │   per-visitor + global throttling · input validation · HMAC-signed sessions
         ▼
   src/lib/agent   workflow → pipeline → relevance → constraints → scoring → planner → explain → revise → rubric
@@ -132,16 +134,26 @@ Browser (React, no accounts; answers + plan kept in localStorage)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLANNER.md](docs/PLANNER.md) (scoring formula, constraints, revision table).
 
+**Map and place search (CR-007).** The Location step shows a real map ([MapLibre GL](https://maplibre.org) with free [OpenFreeMap](https://openfreemap.org) tiles, no key) with a pin
+and a circle for the distance limit. Typing in the search box finds places in the Raleigh area through [Photon](https://photon.komoot.io) (OpenStreetMap data). A searched place becomes
+the search center for the plan, exactly like one of the curated neighborhoods; the curated list stays selectable and is the fallback when search or the map is unavailable.
+Qloo supplies neither map tiles nor geocoding; it still supplies every place in the plan.
+
+**Privacy:** place search is proxied by our server, so the browser never sends what you type, or your address, to the geocoder; the server forwards only the query text and the
+fixed Raleigh bounding box, caches answers in memory, and stores nothing. The map is the one third party your browser contacts directly (tile requests to `tiles.openfreemap.org`
+reveal your IP address and the map area you view, as any map does). No accounts, cookies or analytics; answers and plan stay in your browser's localStorage. Map data © OpenStreetMap contributors.
+
 **Security and usage protection:** the key stays on the server; sessions round-trip through the browser but are HMAC-signed (editing a place, price or wording
 is rejected with `400`); per-visitor and global request limits, a concurrent-build cap, request pacing and an in-memory response cache keep a public link from exhausting the
-event key; diagnostics routes return `404` in production.
+event key; diagnostics routes return `404` in production. Responses carry a Content Security Policy (own origin plus the tile host only, `frame-ancestors 'none'`), `nosniff` and a strict referrer policy.
 
 ## Known limitations
 
 - **Raleigh only**, four categories (cafés, bookstores, Korean restaurants, museums & cultural venues). Climbing and other categories had no coverage in the hackathon data.
 - Qloo's data is partial: **no price for museums and most bookstores** (shown as unknown, never guessed); hours exist but are not displayed; atmosphere tags are missing for some places (the card says so). Ratings, phone numbers and photos are not shown.
 - "Indie" cannot be verified from Qloo's data; the app never claims a shop is independent (it ranks a few national chains lower when you ask for indie, by name).
-- Neighborhood search centers are approximate hand-entered coordinates, and neighborhood blurbs are illustrative; distances are straight-line from that center, not travel time.
+- Curated neighborhood centers are approximate hand-entered coordinates, and their blurbs are illustrative; a searched place uses the geocoder's point. Distances are straight-line from the center, not travel time. Place search is limited to the Raleigh area (a fixed bounding box) and uses a free public geocoder with fair-use limits (cached, throttled); if it or the tile server is down, the flow falls back to the curated areas and an illustration.
+- The Content Security Policy allows inline scripts (Next.js emits them; a per-request nonce would make every page dynamic).
 - Usage limits and the response cache are per server instance (in memory); the signing secret is shared across instances.
 - The planner is deterministic. No language model is used; the optional wording hook is off.
 - Suggestions are ideas, not events: nothing is booked, scheduled or confirmed.

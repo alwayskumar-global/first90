@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-import { articles, chooseReason, openReplace, placeNameOf, resetMock, routineOf, samplePlan } from "./helpers";
+import { expect, test, articles, chooseReason, openReplace, placeNameOf, resetMock, routineOf, samplePlan } from "./helpers";
 
 test.beforeEach(async ({ request }) => {
   await resetMock(request);

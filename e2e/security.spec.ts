@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-import { allItems, resetMock, served, stageButton, type Session } from "./helpers";
+import { expect, test, allItems, resetMock, served, stageButton, type Session } from "./helpers";
 
 const input = {
   interests: ["indie bookstores", "Korean food", "coffee shops", "quiet mornings"],
@@ -126,4 +125,45 @@ test("heavy use from one visitor is throttled with Retry-After and a calm messag
   await expect(page.getByRole("heading", { name: "Your answers are saved" })).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText(/You’re going a little fast|Please wait/)).toBeVisible();
   await context.close();
+});
+
+test("responses carry a Content Security Policy that allows only this app and the tile host", async ({ request }) => {
+  const response = await request.get("/");
+  const csp = response.headers()["content-security-policy"] ?? "";
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("frame-ancestors 'none'");
+  expect(csp).toContain("object-src 'none'");
+  expect(csp).toContain("connect-src 'self' https://tiles.openfreemap.org");
+  expect(csp).not.toMatch(/\*|unsafe-eval|photon|komoot/); // production policy: no wildcard, no eval, no direct geocoder access
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+});
+
+test("place search validates input, works without a Qloo key, and is throttled per visitor", async ({ browser, request }, testInfo) => {
+  expect((await request.get("/api/geocode?q=a")).status()).toBe(400);
+  expect((await request.get("/api/geocode")).status()).toBe(400);
+  const noKey = await request.get("http://127.0.0.1:4012/api/geocode?q=hillsborough"); // app started with no QLOO_API_KEY
+  expect(noKey.status()).toBe(200);
+  expect(((await noKey.json()) as { results: unknown[] }).results.length).toBeGreaterThan(0);
+
+  const visitor = testInfo.project.name === "mobile" ? "198.51.100.18" : "198.51.100.17";
+  const context = await browser.newContext({ baseURL: "http://127.0.0.1:4013", extraHTTPHeaders: { "x-forwarded-for": visitor } });
+  const codes: number[] = [];
+  for (let i = 0; i < 4; i++) {
+    const response = await context.request.get("/api/geocode?q=hillsborough");
+    codes.push(response.status());
+    if (response.status() === 429) expect(Number(response.headers()["retry-after"])).toBeGreaterThan(0);
+  }
+  expect(codes).toEqual([200, 200, 200, 429]);
+  await context.close();
+});
+
+test("a tampered or out-of-area searched place is rejected by the server", async ({ request }) => {
+  const input = {
+    interests: ["coffee shops"], areaKey: "raleigh-nc", radiusMeters: 5000, categories: ["cafe"], atmosphere: "no_preference", preferMornings: false,
+  };
+  const build = (customArea: unknown, extra: object = {}) => request.post("/api/plan", { data: { action: "build", input: { ...input, customArea, ...extra } } });
+  expect((await build({ lat: 35.2271, lon: -80.8431, label: "Charlotte Uptown" })).status()).toBe(400);
+  expect((await build({ lat: 35.78, lon: -78.64, label: "<img src=x onerror=alert(1)>" })).status()).toBe(400);
+  expect((await build({ lat: 35.78, lon: -78.64, label: "Both" }, { neighborhoodKey: "five-points" })).status()).toBe(400);
 });

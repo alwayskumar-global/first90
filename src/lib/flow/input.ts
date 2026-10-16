@@ -29,7 +29,7 @@ export function selectCategories(state: Pick<FlowState, "prefs" | "anchors">): C
 /** Build the engine's TasteInput from what the user entered. Pure. */
 export function buildTasteInput(state: FlowState): TasteInput {
   const { area, anchors, prefs } = state;
-  const scope = area.unsure && area.scope === "nearby" ? "city" : area.scope; // "Nearby" needs a neighborhood
+  const scope = area.unsure && area.scope === "nearby" ? "city" : area.scope; // "Nearby" needs an area
   const confirmations = Object.fromEntries(
     anchors.filter((a: Anchor) => a.kind === "confirmed" && a.matchId).map((a) => [a.input, a.matchId as string]),
   );
@@ -39,6 +39,7 @@ export function buildTasteInput(state: FlowState): TasteInput {
     ...(Object.keys(confirmations).length > 0 ? { confirmations } : {}),
     areaKey: "raleigh-nc",
     ...(area.neighborhoodKey && !area.unsure ? { neighborhoodKey: area.neighborhoodKey } : {}),
+    ...(area.custom && !area.unsure ? { customArea: area.custom } : {}),
     radiusMeters: SEARCH_SCOPES[scope].radiusMeters,
     categories: selectCategories(state),
     ...(!prefs.skipped.budget && prefs.budget === "budget" ? { maxPriceLevel: BUDGET_CEILING.budget } : {}),

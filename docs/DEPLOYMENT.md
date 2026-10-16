@@ -8,7 +8,7 @@ Nothing here has been run. Rule 8: the repository stays private and nothing is s
 2. **Environment variables → Production** (and Preview if previews will be used):
    - `QLOO_API_KEY` = the event key *(Sensitive)*.
    - `SESSION_SECRET` = output of `openssl rand -hex 32` *(Sensitive)*. Keep the same value on every deployment so signed sessions stay valid across instances and redeploys.
-   - Leave **unset**: `DIAGNOSTICS_ENABLED`, `QLOO_BASE_URL` (default is correct).
+   - Leave **unset**: `DIAGNOSTICS_ENABLED`, `QLOO_BASE_URL` (default is correct). Optional: `GEOCODER_BASE_URL` (default Photon; no key needed, no new secret for CR-007).
    - Optional tuning (defaults are fine): `RATE_LIMIT_BUILDS_PER_MIN`, `RATE_LIMIT_GLOBAL_BUILDS_PER_MIN`, `MAX_CONCURRENT_BUILDS`, `QLOO_CACHE_TTL_SECONDS`. See `.env.example`.
 3. Deploy. In **Settings → Deployment Protection**, make sure the **Production** URL is publicly accessible (no Vercel Authentication / password) so judges need no login.
 4. Smoke test the production URL in a private window and on a phone:

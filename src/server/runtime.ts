@@ -3,6 +3,8 @@ import { readQlooConfig } from "@/lib/config";
 import { createTtlCache, withCache } from "@/lib/qloo/cache";
 import { createQlooClient, type QlooClient } from "@/lib/qloo/client";
 import { createGate, createLimits } from "./limits";
+import { readGeocoderUrl, searchPlaces } from "@/lib/geocode/photon";
+import { cachedSearch, type GeocodeApiDeps } from "./geocodeApi";
 import type { PlanApiDeps } from "./planApi";
 import { readSessionSecret } from "./sessionSigning";
 
@@ -25,4 +27,14 @@ export const planApiDeps: PlanApiDeps = {
   limits,
   sessionSecret: () => readSessionSecret(),
   buildGate,
+};
+
+const geocodeTtl = Number(process.env.GEOCODER_CACHE_TTL_SECONDS);
+const geocodeTtlSeconds = Number.isFinite(geocodeTtl) && geocodeTtl >= 0 && process.env.GEOCODER_CACHE_TTL_SECONDS ? geocodeTtl : 3600;
+
+/** Area search (CR-007). Independent of the Qloo key: it works, and fails, on its own. */
+export const geocodeApiDeps: GeocodeApiDeps = {
+  search: cachedSearch((query) => searchPlaces(query, { baseUrl: readGeocoderUrl() }), { ttlMs: geocodeTtlSeconds * 1000 }),
+  perVisitor: limits.geocode,
+  global: limits.globalLookups,
 };

@@ -73,7 +73,9 @@ const murakami = [
 ];
 
 let mode = { mode: "ok", ids: [] };
-const served = new Map(); // entity_id -> { name, address, price, website }
+const served = new Map();
+let lastLocation = null; // WKT point and radius of the most recent /v2/insights request
+const geoQueries = []; // raw query strings the mock geocoder received // entity_id -> { name, address, price, website }
 
 const json = (res, status, body, headers = {}) => {
   res.writeHead(status, { "content-type": "application/json", ...headers });
@@ -88,9 +90,22 @@ http
       mode = { mode: "ok", ids: [], ...JSON.parse((await readBody(req)) || "{}") };
       return json(res, 200, mode);
     }
+    if (url.pathname === "/__last") return json(res, 200, { lastLocation, geoQueries });
     if (url.pathname === "/__served") return json(res, 200, Object.fromEntries(served));
-    if (url.pathname === "/__reset") { served.clear(); mode = { mode: "ok", ids: [] }; return json(res, 200, {}); }
+    if (url.pathname === "/__reset") { served.clear(); lastLocation = null; geoQueries.length = 0; mode = { mode: "ok", ids: [] }; return json(res, 200, {}); }
     if (url.pathname === "/__health") return json(res, 200, { ok: true });
+
+    // Stand-in for the Photon geocoder (no API key). Synthetic places, plus one far outside the demo area.
+    if (url.pathname === "/photon/api") {
+      geoQueries.push(url.search);
+      if (mode.geo === "down") return json(res, 503, { error: "down" });
+      const q = (url.searchParams.get("q") ?? "").toLowerCase();
+      const f = (name, lon, lat, extra = {}) => ({ type: "Feature", geometry: { type: "Point", coordinates: [lon, lat] }, properties: { name, city: "Raleigh", state: "North Carolina", ...extra } });
+      const features = q.includes("hillsborough")
+        ? [f("Hillsborough Street", -78.67929, 35.79051, { district: "West Raleigh" }), f("Hillsborough Street Lofts", -78.65391, 35.78145, { district: "Glenwood South" })]
+        : q.includes("charlotte") ? [f("Charlotte Uptown", -80.8431, 35.2271, { city: "Charlotte" })] : [];
+      return json(res, 200, { type: "FeatureCollection", features });
+    }
 
     if (req.headers["x-api-key"] !== KEY) return json(res, 401, { error: "unauthorized" });
     if (mode.mode === "rate_limit") return json(res, 429, { error: "rate limited" });
@@ -108,6 +123,7 @@ http
     if (url.pathname === "/v2/insights") {
       if (mode.mode === "empty") return json(res, 200, { success: true, results: { entities: [] } });
       const p = url.searchParams;
+      lastLocation = { point: p.get("filter.location"), radius: p.get("filter.location.radius") };
       let list = (DATA[p.get("filter.tags")] ?? []).map((e) => structuredClone(e));
       const max = p.get("filter.price_level.max");
       if (max) list = list.filter((e) => e.properties.price_level && e.properties.price_level <= Number(max));
