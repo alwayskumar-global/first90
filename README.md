@@ -7,7 +7,7 @@ staged, revisable plan of real local places for their **First Week**, **First Mo
 record returned by the [Qloo](https://docs.qloo.com) API, every sentence explaining a suggestion is built from fields Qloo
 returned, and the user can save, replace or reject any suggestion and watch the plan change.
 
-Built for the **Qloo Agentic Hackathon**. Demo city: **Raleigh, NC**. Live demo: _add the deployed URL here_.
+Built for the **Qloo Agentic Hackathon**. Demo city: **Raleigh, NC**. Live demo: <https://first90-three.vercel.app>.
 
 ## The problem
 
