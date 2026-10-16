@@ -17,7 +17,7 @@ Nothing here has been run. Rule 8: the repository stays private and nothing is s
    - `https://<url>/api/diagnostics/plan?scenarios=1` must return **404**.
 5. Optional live grounding audit against production (uses your local key, about 5 Qloo requests):
    `QLOO_API_KEY=… node scripts/live-audit.mjs https://<url>` → expect `LIVE AUDIT PASSED`.
-6. Add the production domain to the README ("Live demo") and `docs/DEVPOST_SUBMISSION.md`, then commit.
+6. Add the production domain to the README ("Live demo") and your local `docs/DEVPOST_SUBMISSION.md` (git-ignored); commit the README change.
 7. Judging window: Qloo keeps hackathon keys active through the judging period (to **16 November 2026**) and deactivates them afterwards; keep the deployment up until then. After that the demo needs a new authorized key.
 
 Notes: usage limits and the Qloo response cache are per serverless instance; the global cap therefore bounds each instance, not the whole fleet. For a judging-scale audience this is ample; raise the limits only if Qloo raises the key's quota.
@@ -38,4 +38,4 @@ Do this only after Kumar's go-ahead, and after A if the live URL should appear i
    ```
 4. Confirm the license is detected and visible in the right-hand **About** panel: `gh repo view alwayskumar-global/first90 --json licenseInfo` → `MIT License`. (The `LICENSE` file at the repo root is what GitHub reads; Devpost requires it to be visible there.)
 5. Open the repo in a private window: README renders, no secrets in any file, Actions tab green.
-6. Copy the public repo URL and the live URL into the Devpost form from `docs/DEVPOST_SUBMISSION.md`; take the screenshots from the deployed site; submit only on Kumar's instruction before **30 October 2026, 11:45 PM EDT** (31 Oct, 9:15 AM IST).
+6. Copy the public repo URL and the live URL into the Devpost form from your local `docs/DEVPOST_SUBMISSION.md` (git-ignored); take the screenshots from the deployed site; submit only on Kumar's instruction before **30 October 2026, 11:45 PM EDT** (31 Oct, 9:15 AM IST).

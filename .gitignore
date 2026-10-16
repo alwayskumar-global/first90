@@ -53,3 +53,8 @@ docs/PROJECT_PLAN.md
 # Playwright
 /test-results/
 /playwright-report/
+
+# local-only docs (kept on disk, never committed)
+docs/DEVPOST_SUBMISSION.md
+docs/UI_IMPLEMENTATION_BRIEF.md
+docs/UI_IMPLEMENTATION_NOTES.md

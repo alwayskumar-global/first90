@@ -130,8 +130,7 @@ Browser (React, no accounts; answers + plan kept in localStorage)
   Qloo API  (/search · /v2/tags · /v2/insights)
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLANNER.md](docs/PLANNER.md) (scoring formula, constraints, revision table) and
-[docs/UI_IMPLEMENTATION_NOTES.md](docs/UI_IMPLEMENTATION_NOTES.md) (how the design maps to behavior).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLANNER.md](docs/PLANNER.md) (scoring formula, constraints, revision table).
 
 **Security and usage protection:** the key stays on the server; sessions round-trip through the browser but are HMAC-signed (editing a place, price or wording
 is rejected with `400`); per-visitor and global request limits, a concurrent-build cap, request pacing and an in-memory response cache keep a public link from exhausting the
