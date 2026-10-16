@@ -240,11 +240,19 @@ export function ReplaceDialog({
             <h2 id={titleId} style={{ margin: 0, font: "400 clamp(1.625rem,3.2vw,2rem)/1.15 var(--font-serif)", letterSpacing: "-.015em" }}>We couldn’t look just now</h2>
             <StateBanner tone="error" icon="triangle-alert" title="Your plan is unchanged" role="alert">
               <p className="f90-state__body">
-                {phase.error.kind === "rate_limit" ? "We’ve asked our data source for a lot just now. Please wait a moment, then try again." : "The problem was on our side, not yours. Nothing was lost."}
+                {phase.error.kind === "rate_limit"
+                  ? "We’ve asked our data source for a lot just now. Please wait a moment, then try again."
+                  : phase.error.kind === "bad_session"
+                    ? "We can’t verify this saved plan any more, so we can’t revise it. Your answers are still saved; rebuild the plan to keep going."
+                    : "The problem was on our side, not yours. Nothing was lost."}
               </p>
             </StateBanner>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <Button variant="primary" size="lg" fullWidth iconLeft="refresh-cw" onClick={find}>Try again</Button>
+              {phase.error.kind === "bad_session" ? (
+                <Button variant="primary" size="lg" fullWidth iconLeft="refresh-cw" onClick={() => router.push("/building")}>Rebuild my plan</Button>
+              ) : (
+                <Button variant="primary" size="lg" fullWidth iconLeft="refresh-cw" onClick={find}>Try again</Button>
+              )}
               <Button variant="text" size="lg" fullWidth onClick={onClose}>Keep this suggestion</Button>
             </div>
           </div>

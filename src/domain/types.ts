@@ -242,6 +242,8 @@ export interface CategoryCoverage {
 }
 
 export interface PlanSession {
+  /** HMAC added by the server to every session it returns; sessions without a valid one are rejected. */
+  signature?: string;
   plan: Plan;
   /** Normalized Qloo records for the items currently in the plan (keyed by entity ID). */
   candidates: Record<string, PlaceCandidate>;

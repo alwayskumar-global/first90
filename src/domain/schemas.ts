@@ -110,6 +110,7 @@ const appliedConstraint = z.object({
 });
 
 export const planSessionSchema = z.object({
+  signature: z.string().max(100).optional(),
   plan: z.object({
     input: tasteInputSchema,
     queryRadiusMeters: z.number(),

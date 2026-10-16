@@ -15,6 +15,7 @@ export function StepHeader({ backHref, step, label }: { backHref: string; step: 
       </div>
       <div
         role="progressbar"
+        aria-label="Setup progress"
         aria-valuemin={1}
         aria-valuemax={3}
         aria-valuenow={step}

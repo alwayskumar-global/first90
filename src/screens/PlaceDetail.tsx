@@ -180,7 +180,7 @@ export function PlaceDetail() {
                 <dd style={td}>
                   {item.externalUrl ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6 }}>
-                      <Button variant="secondary" iconRight="external-link" href={item.externalUrl} aria-label={`Visit ${candidate.name} website, opens in a new tab`}>Visit website</Button>
+                      <Button variant="secondary" iconRight="external-link" href={item.externalUrl} aria-label={`Visit website for ${candidate.name} (opens in a new tab)`}>Visit website</Button>
                       <span style={{ font: "400 12px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>{host}</span>
                     </div>
                   ) : (

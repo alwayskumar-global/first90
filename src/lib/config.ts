@@ -29,9 +29,11 @@ export function readQlooConfig(env: Record<string, string | undefined> = process
   const baseUrl = (env.QLOO_BASE_URL?.trim() || DEFAULT_QLOO_BASE_URL).replace(/\/+$/, "");
   try {
     const url = new URL(baseUrl);
-    if (url.protocol !== "https:") throw new Error("not https");
+    // https only, except a loopback host (a local mock server for end-to-end tests).
+    const loopback = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) throw new Error("not https");
   } catch {
-    throw new ConfigError("QLOO_BASE_URL must be a valid https URL.");
+    throw new ConfigError("QLOO_BASE_URL must be a valid https URL (http is allowed only for localhost).");
   }
   return { apiKey, baseUrl };
 }

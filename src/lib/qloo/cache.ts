@@ -15,6 +15,7 @@ export interface TtlCache {
 
 export function createTtlCache(options: { ttlMs: number; maxEntries: number; now?: () => number }): TtlCache {
   const { ttlMs, maxEntries, now = Date.now } = options;
+  if (ttlMs <= 0) return { get: () => undefined, set: () => {}, size: () => 0 }; // caching disabled
   const store = new Map<string, { value: unknown; expiresAt: number }>();
   return {
     get<T>(key: string): T | undefined {
