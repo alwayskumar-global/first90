@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES } from "@/domain/demo";
+import { categoryLabelFor } from "@/domain/cuisine";
 import { STAGE_KEYS, type PlanSession } from "@/domain/types";
 import { Icon, type IconName } from "@/components/Icon";
 import { Button, StateBanner } from "@/components/ui";
 import type { StepId } from "@/lib/agent/trace";
 import { ApiError, buildPlanRequest } from "@/lib/flow/api";
 import { useFlow } from "@/lib/flow/FlowProvider";
-import { buildTasteInput } from "@/lib/flow/input";
+import { buildTasteInput, cuisineOf } from "@/lib/flow/input";
 import { areaText, choicesText, rangeText, unsearchedShort } from "@/lib/flow/summary";
 
 type Mode = "building" | "slow" | "partial" | "error" | "empty";
@@ -161,7 +161,7 @@ export function Building() {
                     return (
                       <li key={c.category} style={{ display: "flex", alignItems: "center", gap: 10, font: "400 15px/1.4 var(--font-sans)" }}>
                         <span style={{ display: "inline-flex", color: ok ? "var(--evergreen-600)" : "var(--apricot-700)" }}><Icon name={ok ? "circle-check" : "circle-alert"} size={18} /></span>
-                        <span style={{ flex: 1, minWidth: 0 }}>{CATEGORIES[c.category].label}</span>
+                        <span style={{ flex: 1, minWidth: 0 }}>{categoryLabelFor(c.category, state.session?.plan.input.cuisineTagId ?? cuisineOf(state.anchors))}</span>
                         <span style={{ font: "500 13px/1.3 var(--font-sans)", color: "var(--text-secondary)", textAlign: "right" }}>{ok ? "Options found" : c.loaded ? "Not enough yet" : "Couldn’t load"}</span>
                       </li>
                     );

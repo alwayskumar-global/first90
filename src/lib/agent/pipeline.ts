@@ -1,3 +1,4 @@
+import { categoryLabelFor, isCuisineTag } from "@/domain/cuisine";
 import { CATEGORIES, CATEGORY_KEYS, POOL_SIZE_PER_CATEGORY, type CategoryKey } from "@/domain/demo";
 import type {
   InterestMatch,
@@ -41,6 +42,7 @@ export function summarizeResolution(input: TasteInput, resolved: ResolvedInteres
         for (const key of CATEGORY_KEYS) {
           if (CATEGORIES[key].filterTagId === interest.match.id) interestCategories.add(key);
         }
+        if (isCuisineTag(interest.match.id)) interestCategories.add("restaurant");
         break;
       }
       case "preference": {
@@ -96,17 +98,21 @@ export async function loadPool(
     center: { lat: number; lon: number };
     queryRadiusMeters: number;
     queryMaxPriceLevel?: number;
+    /** CR-009: cuisine tag for the restaurant category. */
+    cuisineTagId?: string;
   },
 ): Promise<PoolResult> {
   const queryCategory = async (category: CategoryKey) => {
       const definition = CATEGORIES[category];
+      const filterTagId = category === "restaurant" && args.cuisineTagId ? args.cuisineTagId : definition.filterTagId;
       try {
         const result = await discoverPlaces(client, {
           category,
+          filterTagId,
           center: args.center,
           radiusMeters: args.queryRadiusMeters,
           signalEntityIds: args.signals.filter((s) => s.kind === "entity").map((s) => s.id),
-          signalTagIds: args.signals.filter((s) => s.kind === "tag" && s.id !== definition.filterTagId).map((s) => s.id),
+          signalTagIds: args.signals.filter((s) => s.kind === "tag" && s.id !== filterTagId).map((s) => s.id),
           ...(args.queryMaxPriceLevel !== undefined && definition.pricesAvailable
             ? { maxPriceLevel: args.queryMaxPriceLevel }
             : {}),
@@ -140,7 +146,7 @@ export async function loadPool(
   for (const outcome of outcomes) {
     if (!outcome.ok) {
       failedCategories.push(outcome.category);
-      warnings.push(`${CATEGORIES[outcome.category].label} could not be loaded (${outcome.error.kind}).`);
+      warnings.push(`${categoryLabelFor(outcome.category, args.cuisineTagId)} could not be loaded (${outcome.error.kind}).`);
       continue;
     }
     perCategory[outcome.category] = outcome.result.candidates.length;

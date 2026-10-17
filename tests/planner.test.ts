@@ -7,7 +7,7 @@ import { BASE_INPUT, candidate } from "./helpers";
 import type { CategoryKey } from "@/domain/demo";
 import type { PlaceCandidate } from "@/domain/types";
 
-const ALL_CATS: CategoryKey[] = ["cafe", "bookstore", "korean_restaurant", "museum"];
+const ALL_CATS: CategoryKey[] = ["cafe", "bookstore", "restaurant", "museum"];
 const ctxFor = (pool: PlaceCandidate[], patch: Partial<typeof BASE_INPUT> = {}, interests: CategoryKey[] = []) =>
   makeScoringContext({ ...BASE_INPUT, ...patch }, pool, new Set(interests));
 

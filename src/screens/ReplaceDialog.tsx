@@ -7,7 +7,7 @@ import type { FeedbackReason, PlaceCandidate, PlanItem, PlanRevision, PlanSessio
 import { Icon, type IconName } from "@/components/Icon";
 import { Button, StateBanner } from "@/components/ui";
 import { ApiError, reviseRequest } from "@/lib/flow/api";
-import { CATEGORY_ICON, CATEGORY_LABEL } from "./placeView";
+import { CATEGORY_ICON, placeBadge } from "./placeView";
 
 interface ReasonOption {
   id: string;
@@ -137,7 +137,7 @@ export function ReplaceDialog({
               <div style={{ minWidth: 0 }}>
                 <div style={{ font: "600 11px/1.3 var(--font-sans)", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text-muted)" }}>Replacing {"·"} {item.routine}</div>
                 <div style={{ marginTop: 3, font: "500 16px/1.3 var(--font-sans)" }}>{candidate.name}</div>
-                <div style={{ font: "400 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>{CATEGORY_LABEL[candidate.category]}</div>
+                <div style={{ font: "400 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>{placeBadge(candidate.category, session)}</div>
               </div>
             </div>
 

@@ -1,4 +1,5 @@
-import { CATEGORIES } from "@/domain/demo";
+import { categoryLabelFor, isCuisineTag } from "@/domain/cuisine";
+import { CATEGORIES, type InterestAlias } from "@/domain/demo";
 import type { InterestMatch, ResolvedInterest } from "@/domain/types";
 import { categoryOfTag } from "./input";
 import type { Anchor } from "./types";
@@ -12,7 +13,7 @@ const ENTITY_TYPES: Record<string, string> = {
 export function typeLabel(match: InterestMatch): string {
   if (match.kind === "entity") return ENTITY_TYPES[(match.type ?? "").replace("urn:entity:", "")] ?? "Interest";
   const category = categoryOfTag(match.id);
-  if (category) return category === "korean_restaurant" ? "Food" : "Place";
+  if (category) return category === "restaurant" ? "Food" : "Place";
   if ((match.type ?? "").includes("cuisine")) return "Food";
   if ((match.id ?? "").includes(":place:")) return "Place";
   return "Interest";
@@ -59,6 +60,16 @@ export function unsearchedAnchors(anchors: Anchor[]): Anchor[] {
   return anchors.filter(
     (a) => (a.kind === "resolved" || a.kind === "confirmed") && !a.category && !!a.matchId?.startsWith("urn:tag:") && a.matchId.includes(":place:"),
   );
+}
+
+/** CR-009: a plan searches one cuisine; further cuisine interests are not searched but still rank places. */
+export function extraCuisineAnchors(anchors: Anchor[]): Anchor[] {
+  return anchors.filter((a) => (a.kind === "resolved" || a.kind === "confirmed") && isCuisineTag(a.matchId)).slice(1);
+}
+
+/** An interest answered from the built-in aliases (no lookup needed). */
+export function curatedAnchor(input: string, alias: InterestAlias): Anchor {
+  return anchorFromMatch(input, { kind: "tag", id: alias.tagId, name: categoryLabelFor(alias.category, alias.tagId), source: "curated" }, "resolved");
 }
 
 export function anchorFromPreference(input: string): Anchor {

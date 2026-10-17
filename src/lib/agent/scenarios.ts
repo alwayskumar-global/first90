@@ -8,7 +8,7 @@ export const BASELINE_INPUT: TasteInput = {
   interests: [...DEMO_PERSONA.interests],
   areaKey: DEMO_AREA.key,
   radiusMeters: DEMO_AREA.defaultRadiusMeters,
-  categories: ["cafe", "bookstore", "korean_restaurant", "museum"],
+  categories: ["cafe", "bookstore", "restaurant", "museum"],
   atmosphere: "no_preference",
   preferMornings: false,
 };

@@ -2,27 +2,27 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, type CategoryKey } from "@/domain/demo";
+import { INTEREST_ALIASES, type InterestAlias } from "@/domain/demo";
 import { Icon, type IconName } from "@/components/Icon";
 import { StepHeader, StepTitle } from "@/components/StepHeader";
 import { Badge, Button, Chip, StateBanner } from "@/components/ui";
 import { ApiError, resolveInterestRequest } from "@/lib/flow/api";
 import { useFlow } from "@/lib/flow/FlowProvider";
-import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, type InterestOutcome } from "@/lib/flow/labels";
+import { curatedAnchor, anchorFromPreference, anchorOwnWords, outcomeFromResolved, type InterestOutcome } from "@/lib/flow/labels";
 import { MAX_ANCHORS } from "@/lib/flow/state";
 import { unsearchedNote } from "@/lib/flow/summary";
 import type { Anchor } from "@/lib/flow/types";
 
 const EXAMPLES: { label: string; make: () => Anchor }[] = [
-  { label: "Independent bookstores", make: () => curated("Independent bookstores", "bookstore") },
-  { label: "Korean food", make: () => curated("Korean food", "korean_restaurant") },
-  { label: "Coffee shops", make: () => curated("Coffee shops", "cafe") },
+  { label: "Independent bookstores", make: () => curated("Independent bookstores", "independent bookstore") },
+  { label: "Korean food", make: () => curated("Korean food", "korean food") },
+  { label: "Coffee shops", make: () => curated("Coffee shops", "coffee shop") },
   { label: "Quiet mornings", make: () => anchorFromPreference("Quiet mornings") },
-  { label: "Art museums", make: () => curated("Art museums", "museum") },
+  { label: "Art museums", make: () => curated("Art museums", "art museum") },
 ];
 
-function curated(input: string, key: CategoryKey): Anchor {
-  return anchorFromMatch(input, { kind: "tag", id: CATEGORIES[key].filterTagId, name: CATEGORIES[key].label, source: "curated" }, "resolved");
+function curated(input: string, aliasKey: string): Anchor {
+  return curatedAnchor(input, INTEREST_ALIASES[aliasKey] as InterestAlias);
 }
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();

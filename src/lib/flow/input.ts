@@ -1,3 +1,4 @@
+import { isCuisineTag } from "@/domain/cuisine";
 import { CATEGORIES, CATEGORY_KEYS, SEARCH_SCOPES, type CategoryKey } from "@/domain/demo";
 import type { TasteInput } from "@/domain/types";
 import type { Anchor, FlowState, RoutineId } from "./types";
@@ -5,7 +6,7 @@ import type { Anchor, FlowState, RoutineId } from "./types";
 /** Routine cards in the setup flow, mapped to the place categories the demo supports. */
 export const ROUTINE_CATEGORIES: Record<RoutineId, CategoryKey[]> = {
   work: ["cafe", "bookstore"],
-  meals: ["korean_restaurant"],
+  meals: ["restaurant"],
   weekend: ["museum", "bookstore"],
   arts: ["museum"],
 };
@@ -14,7 +15,13 @@ export const ROUTINE_CATEGORIES: Record<RoutineId, CategoryKey[]> = {
 export const BUDGET_CEILING = { budget: 2 } as const;
 
 export function categoryOfTag(matchId: string | undefined): CategoryKey | undefined {
+  if (isCuisineTag(matchId)) return "restaurant"; // CR-009: any cuisine tag asks for restaurants
   return CATEGORY_KEYS.find((key) => CATEGORIES[key].filterTagId === matchId);
+}
+
+/** The cuisine to plan around (CR-009): the first cuisine interest. Others are noted and still rank places. */
+export function cuisineOf(anchors: Pick<Anchor, "kind" | "matchId">[]): string | undefined {
+  return anchors.find((a) => (a.kind === "resolved" || a.kind === "confirmed") && isCuisineTag(a.matchId))?.matchId;
 }
 
 /** Categories to search: routines (plus any category a stated interest names); none chosen = all four. */
@@ -40,6 +47,7 @@ export function buildTasteInput(state: FlowState): TasteInput {
     areaKey: "raleigh-nc",
     ...(area.neighborhoodKey && !area.unsure ? { neighborhoodKey: area.neighborhoodKey } : {}),
     ...(area.custom && !area.unsure ? { customArea: area.custom } : {}),
+    ...(cuisineOf(anchors) ? { cuisineTagId: cuisineOf(anchors) as string } : {}),
     radiusMeters: SEARCH_SCOPES[scope].radiusMeters,
     categories: selectCategories(state),
     ...(!prefs.skipped.budget && prefs.budget === "budget" ? { maxPriceLevel: BUDGET_CEILING.budget } : {}),

@@ -41,9 +41,9 @@ export const PROXIMITY_WEIGHT: Record<StageKey, number> = {
 
 /** Which categories suit which stage: everyday routines first, bigger outings later. */
 export const STAGE_CATEGORY_FIT: Record<StageKey, Record<CategoryKey, number>> = {
-  first_week: { cafe: 1, bookstore: 0.8, korean_restaurant: 0.5, museum: 0.2 },
-  first_month: { cafe: 0.6, bookstore: 0.8, korean_restaurant: 1, museum: 0.6 },
-  months_2_3: { cafe: 0.3, bookstore: 0.6, korean_restaurant: 0.6, museum: 1 },
+  first_week: { cafe: 1, bookstore: 0.8, restaurant: 0.5, museum: 0.2 },
+  first_month: { cafe: 0.6, bookstore: 0.8, restaurant: 1, museum: 0.6 },
+  months_2_3: { cafe: 0.3, bookstore: 0.6, restaurant: 0.6, museum: 1 },
 };
 
 export const CHAIN_PENALTY = 0.15;

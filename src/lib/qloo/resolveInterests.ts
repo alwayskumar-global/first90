@@ -1,4 +1,5 @@
-import { CATEGORIES, INTEREST_ALIASES } from "@/domain/demo";
+import { CUISINE_TAG_PATTERN, categoryLabelFor } from "@/domain/cuisine";
+import { INTEREST_ALIASES } from "@/domain/demo";
 import type { InterestMatch, ResolvedInterest } from "@/domain/types";
 import { classifyPreference } from "@/lib/agent/preferences";
 import type { QlooClient } from "./client";
@@ -20,6 +21,23 @@ async function tagCandidates(client: QlooClient, input: string, normalized: stri
   const all = [...exact.values()];
   const placeScoped = all.filter((match) => isPlaceTag(match.id));
   return (placeScoped.length > 0 ? placeScoped : all).sort((a, b) => a.id.localeCompare(b.id));
+}
+
+/** Words that turn a cuisine into a phrase ("japanese food"); stripped before looking the cuisine up. */
+const CUISINE_SUFFIX = /\s+(food|cuisine|restaurant|cooking|dining|eats)$/;
+
+async function cuisineCandidate(client: QlooClient, normalized: string): Promise<InterestMatch | undefined> {
+  const base = normalized.replace(CUISINE_SUFFIX, "");
+  if (base === normalized || !base) return undefined; // not phrased as a cuisine
+  for (const raw of await client.tags(base)) {
+    const parsed = rawTagSchema.safeParse(raw);
+    if (!parsed.success) continue;
+    const { id, name, type } = parsed.data;
+    if (CUISINE_TAG_PATTERN.test(id) && normalizePhrase(name) === base) {
+      return { kind: "tag", id, name, ...(type ? { type } : {}), source: "qloo" };
+    }
+  }
+  return undefined;
 }
 
 async function entityCandidates(client: QlooClient, input: string, normalized: string): Promise<InterestMatch[]> {
@@ -55,15 +73,18 @@ export async function resolveInterest(
   const preference = classifyPreference(input);
   if (preference) return { status: "preference", input, preference };
 
-  const aliasCategory = INTEREST_ALIASES[normalized];
-  if (aliasCategory) {
-    const category = CATEGORIES[aliasCategory];
+  const alias = INTEREST_ALIASES[normalized];
+  if (alias) {
     return {
       status: "resolved",
       input,
-      match: { kind: "tag", id: category.filterTagId, name: category.label, source: "curated" },
+      match: { kind: "tag", id: alias.tagId, name: categoryLabelFor(alias.category, alias.tagId), source: "curated" },
     };
   }
+
+  // "ethiopian food", "vietnamese cuisine": look for Qloo's restaurant-style tag for the cuisine itself (CR-009).
+  const cuisine = await cuisineCandidate(client, normalized);
+  if (cuisine) return { status: "resolved", input, match: cuisine };
 
   let candidates = await tagCandidates(client, input, normalized);
   if (candidates.length === 0) candidates = await entityCandidates(client, input, normalized);

@@ -93,7 +93,7 @@ describe("explanations", () => {
   });
 
   it("frames each suggestion as an idea, not a scheduled event", async () => {
-    for (const category of ["cafe", "bookstore", "korean_restaurant", "museum"] as const) {
+    for (const category of ["cafe", "bookstore", "restaurant", "museum"] as const) {
       const { routine } = await explainCandidate(candidate({ id: category, category, name: "Name" }), "first_week", ctx);
       expect(routine).toMatch(/^(Try|Browse|Spend)/);
       expect(routine).not.toMatch(/\b(at \d|on (mon|tue|wed|thu|fri|sat|sun)|reserved|booked)\b/i);

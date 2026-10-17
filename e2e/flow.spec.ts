@@ -106,23 +106,49 @@ test("a word Qloo knows several ways offers choices you can tell apart", async (
 
 test("an interest the demo cannot search is said so, at the interest step, in the routines and in the plan summary", async ({ page }) => {
   await startSample(page);
-  await page.getByRole("textbox", { name: /Search interests/ }).fill("japanese food");
-  await page.getByRole("button", { name: /^Japanese Food .* Add$/ }).click();
-  const note = page.getByRole("note").filter({ hasText: "“Japanese Food” isn’t one of this demo’s place types" });
-  await expect(note).toContainText("cafés, bookstores, Korean restaurants, and museums");
+  await page.getByRole("textbox", { name: /Search interests/ }).fill("library");
+  await page.getByRole("button", { name: "Library · Kind of place" }).click();
+  const note = page.getByRole("note").filter({ hasText: "“library” isn’t one of this demo’s place types" });
+  await expect(note).toContainText("cafés, bookstores, restaurants, and museums");
   await expect(note).toContainText("won’t add suggestions of its own");
 
   await page.getByRole("button", { name: "Continue to preferences" }).click();
-  await expect(page.getByText("In this demo: Korean restaurants")).toBeVisible();
+  await expect(page.getByText("In this demo: restaurants (your cuisine, if you named one)")).toBeVisible();
   await expect(page.getByText("In this demo: museums and cultural venues")).toBeVisible();
 
   await page.getByRole("button", { name: "Build my plan" }).click();
   await expect(page).toHaveURL(/\/plan$/, { timeout: 45_000 });
   const session = await page.evaluate(() => (JSON.parse(window.localStorage.getItem("f90.flow.v1") ?? "{}") as { session: Session }).session);
-  expect(session.plan.input["interests"]).toContain("japanese food");
-  // no Japanese place appears; the interest only shapes ranking (it may be named as a signal in a "because" line)
-  expect(allItems(session).every((item) => ["cafe", "bookstore", "korean_restaurant", "museum"].includes(item.category))).toBe(true);
-  await expect(page.getByText("Japanese Food: taste signal only. This demo covers cafés, bookstores, Korean restaurants, and museums.")).toBeVisible();
+  expect(session.plan.input["interests"]).toContain("library");
+  expect(allItems(session).every((item) => ["cafe", "bookstore", "restaurant", "museum"].includes(item.category))).toBe(true);
+  await expect(page.getByText("library: taste signal only. This demo covers cafés, bookstores, restaurants, and museums.")).toBeVisible();
+});
+
+test("'Japanese food' plans Japanese restaurants, not Korean ones, and the persona still plans Korean", async ({ page, request }) => {
+  await startSample(page);
+  await page.getByRole("button", { name: /^Remove Korean food$/ }).click();
+  await page.getByRole("textbox", { name: /Search interests/ }).fill("japanese food");
+  await page.getByRole("button", { name: /^japanese food|^Japanese .* Add$/i }).first().click();
+  await expect(page.getByRole("note")).toHaveCount(0); // a cuisine is searchable: no 'not searched' note
+  const session = await buildFromInterests(page);
+  await expect(page).toHaveURL(/\/plan$/, { timeout: 45_000 });
+
+  expect(session.plan.input["cuisineTagId"]).toBe("urn:tag:genre:place:restaurant:japanese");
+  const meals = allItems(session).filter((item) => item.category === "restaurant");
+  expect(meals.length).toBeGreaterThan(0);
+  for (const item of meals) {
+    expect(item.routine).toMatch(/for a Japanese meal$/);
+    expect(["mock-j1", "mock-j2", "mock-j3"]).toContain(item.qlooEntityId); // the Chinese place Qloo also tagged Japanese is dropped
+  }
+  await expect(page.getByText("Japanese restaurant", { exact: true }).first()).toBeVisible();
+  await expect(page.locator("body")).not.toContainText("Korean");
+  await expect(page.locator("body")).not.toContainText("Mock Seoul");
+
+  // and the Korean persona is unchanged
+  await resetMock(request);
+  const persona = await samplePlan(page);
+  expect(persona.plan.input["cuisineTagId"]).toBe("urn:tag:genre:place:restaurant:korean");
+  for (const item of allItems(persona).filter((i) => i.category === "restaurant")) expect(item.routine).toMatch(/for a Korean meal$/);
 });
 
 test("the sample persona, fully searchable, shows no 'not searched' note", async ({ page }) => {

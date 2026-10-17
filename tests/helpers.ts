@@ -8,7 +8,8 @@ export const BASE_INPUT: TasteInput = {
   interests: ["indie bookstores", "Korean food", "coffee shops", "quiet mornings"],
   areaKey: "raleigh-nc",
   radiusMeters: 15_000,
-  categories: ["cafe", "bookstore", "korean_restaurant", "museum"],
+  categories: ["cafe", "bookstore", "restaurant", "museum"],
+  cuisineTagId: "urn:tag:genre:place:restaurant:korean", // the demo persona: "Korean food"
   atmosphere: "no_preference",
   preferMornings: false,
 };
@@ -16,7 +17,7 @@ export const BASE_INPUT: TasteInput = {
 const PRIMARY: Record<CategoryKey, string> = {
   cafe: "Coffee shop",
   bookstore: "Book store",
-  korean_restaurant: "Korean restaurant",
+  restaurant: "Korean restaurant",
   museum: "Museum",
 };
 
@@ -37,7 +38,7 @@ export function candidate(overrides: Partial<PlaceCandidate> & { id: string; cat
     evidence: {
       signalEntityIds: [],
       signalTagIds: [],
-      filterTagIds: [CATEGORIES[category].filterTagId],
+      filterTagIds: [category === "restaurant" ? KOREAN_TAG : CATEGORIES[category].filterTagId],
       affinity: 0.8,
       distanceMeters: 2_000,
       tagNames: [],
@@ -106,7 +107,8 @@ export function fakeClient(byCategoryTag: Record<string, unknown[] | Error>, ext
 
 export const CAFE_TAG = CATEGORIES.cafe.filterTagId;
 export const BOOK_TAG = CATEGORIES.bookstore.filterTagId;
-export const KOREAN_TAG = CATEGORIES.korean_restaurant.filterTagId;
+export const KOREAN_TAG = "urn:tag:genre:place:restaurant:korean";
+export const JAPANESE_TAG = "urn:tag:genre:place:restaurant:japanese";
 export const MUSEUM_TAG = CATEGORIES.museum.filterTagId;
 
 /** A varied pool: 4 cafes, 3 bookstores, 3 korean, 3 museums with distinct distances/prices. */

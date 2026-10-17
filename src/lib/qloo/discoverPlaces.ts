@@ -6,6 +6,8 @@ import { wktPoint } from "./validate";
 
 export interface DiscoverPlacesArgs {
   category: CategoryKey;
+  /** Overrides the category's default Qloo filter tag (CR-009: the user's cuisine for restaurants). */
+  filterTagId?: string;
   center: { lat: number; lon: number };
   radiusMeters: number;
   signalEntityIds?: string[];
@@ -28,7 +30,7 @@ export async function discoverPlaces(
   client: QlooClient,
   args: DiscoverPlacesArgs,
 ): Promise<DiscoverPlacesResult> {
-  const category = CATEGORIES[args.category];
+  const filterTagId = args.filterTagId ?? CATEGORIES[args.category].filterTagId;
   const signalEntityIds = args.signalEntityIds ?? [];
   const signalTagIds = args.signalTagIds ?? [];
   const excluded = args.excludeEntityIds ?? [];
@@ -37,7 +39,7 @@ export async function discoverPlaces(
     "filter.type": "urn:entity:place",
     "filter.location": wktPoint(args.center),
     "filter.location.radius": Math.round(args.radiusMeters),
-    "filter.tags": category.filterTagId,
+    "filter.tags": filterTagId,
     "signal.interests.entities": signalEntityIds.join(",") || undefined,
     "signal.interests.tags": signalTagIds.join(",") || undefined,
     "filter.price_level.max": args.maxPriceLevel,
@@ -57,7 +59,7 @@ export async function discoverPlaces(
       category: args.category,
       signalEntityIds,
       signalTagIds,
-      filterTagIds: [category.filterTagId],
+      filterTagIds: [filterTagId],
     });
     if (!candidate) {
       dropped.malformed++;

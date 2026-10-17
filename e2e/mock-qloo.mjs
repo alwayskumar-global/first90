@@ -11,6 +11,7 @@ const TAG = {
   bookstore: "urn:tag:category:place:book_store",
   korean: "urn:tag:genre:place:restaurant:korean",
   museum: "urn:tag:category:place:museum",
+  japanese: "urn:tag:genre:place:restaurant:japanese",
 };
 
 const t = (name, type) => ({ id: `${type}:${name}`, name, type });
@@ -58,6 +59,12 @@ const DATA = {
     entity({ id: "mock-k2", name: "Mock BBQ House", genre: "Korean barbecue restaurant", distance: 12000, price: 3, affinity: 0.79, ambience: ["Lively"] }),
     entity({ id: "mock-k3", name: "Mock Kimchi Corner", genre: "Korean restaurant", distance: 4000, price: 1, affinity: 0.78, ambience: ["Relaxing"] }),
     entity({ id: "mock-k4", name: "Mock Asian Grocery", genre: "Asian grocery store", distance: 400, price: 1 }), // noise
+  ],
+  [TAG.japanese]: [
+    entity({ id: "mock-j1", name: "Mock Sushi Bar", genre: "Sushi restaurant", distance: 900, price: 3, affinity: 0.82 }),
+    entity({ id: "mock-j2", name: "Mock Ramen House", genre: "Ramen restaurant", distance: 2500, price: 1, affinity: 0.8 }),
+    entity({ id: "mock-j3", name: "Mock Izakaya", genre: "Japanese restaurant", distance: 6000, price: 2, affinity: 0.78, ambience: ["Lively"] }),
+    entity({ id: "mock-j4", name: "Mock Wok Express", genre: "Chinese restaurant", distance: 300, price: 1, affinity: 0.9 }), // tagged Japanese, but Chinese: dropped
   ],
   [TAG.museum]: [
     entity({ id: "mock-m1", name: "Mock Art Museum", genre: "Art museum", distance: 6700, affinity: 0.81, ambience: ["Serene"] }),

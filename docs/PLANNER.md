@@ -20,12 +20,14 @@ Implements PROJECT_PLAN.md sections 4 and 7 (Milestone 2). Code lives in `src/li
 
 Qloo category tags are broad (a discount store carried "Book store", a skating rink carried "Cafe"). Each result is checked against Qloo's own `primary_genre`: deny list first, then allow list, then (no primary genre) allowed genre tags, then the place's name (e.g. "... Cafe"). Places matched only by name or tag rank slightly lower. Dropped places carry a reason in tests; nothing is repaired or invented. Rules came from live Raleigh results and are covered by unit tests.
 
+**Restaurants follow the cuisine (CR-009).** The plan carries an optional `cuisineTagId` (a Qloo `urn:tag:genre:place:restaurant:<cuisine>` tag, taken from the first cuisine interest). That tag is the Qloo filter for the restaurant category; with none, the generic restaurant tag is used. A place is kept when its own primary genre names the cuisine (Japanese: japanese, sushi, ramen, izakaya...), or, weakly, when it is a general Asian/pan-Asian/plain restaurant Qloo also tags with the cuisine; places whose genre names another cuisine, groceries, fast food, hotels and bars are dropped.
+
 ## Hard constraints (`constraints.ts`)
 
 Applied before ranking and never relaxed silently:
 - excluded (dismissed) entities
 - radius, using the distance Qloo returns (a place with no distance cannot be verified, so it is excluded)
-- price ceiling: a place over the ceiling is excluded; for categories Qloo prices reliably (cafés, Korean restaurants), a place with no price is excluded (the ceiling cannot be verified); **museums/cultural venues (CR-003) and bookstores (CR-004) with no price are kept and carry "Price not available — check current details."** No price filter is sent to Qloo for those two categories, because Qloo's filter would drop every unpriced place; a known price above the ceiling is still excluded locally.
+- price ceiling: a place over the ceiling is excluded; for categories Qloo prices reliably (cafés, restaurants), a place with no price is excluded (the ceiling cannot be verified); **museums/cultural venues (CR-003) and bookstores (CR-004) with no price are kept and carry "Price not available — check current details."** No price filter is sent to Qloo for those two categories, because Qloo's filter would drop every unpriced place; a known price above the ceiling is still excluded locally.
 - strict quiet (set by "too loud" feedback): excludes places Qloo tags `Loud` or with a lively ambience (`Lively`, `Social`, `High energy`, ...)
 
 ## Fit score (`scoring.ts`)
@@ -40,7 +42,7 @@ fit = 0.30 * affinity       Qloo query.affinity, min-max within the category poo
     + 0.14 * atmosphere     quietScore (+1 quiet .. -1 lively) if the user prefers quiet (negated for lively)
     + 0.10 * morning        1 if Qloo lists a Morning / Early morning fit and the user prefers mornings
     + 0.08 * interestBoost  1 if the category matches a stated interest
-    + 0.12 * stageFit       category-vs-stage table (cafes early, Korean mid, museums late)
+    + 0.12 * stageFit       category-vs-stage table (cafes early, restaurants mid, museums late)
     + 0.06 * directness     1 if Qloo's primary genre matches the category, 0.5 if matched by name/tags
     + adjustments           "not interested" category penalty (-0.15 each), indie-chain penalty (-0.15)
 ```

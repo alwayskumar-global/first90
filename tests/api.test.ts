@@ -189,6 +189,6 @@ describe("POST /api/interests", () => {
     expect((await handleInterest(post({ text: "" }), makeDeps())).status).toBe(400);
     expect((await handleInterest(post({ text: "x".repeat(81) }), makeDeps())).status).toBe(400);
     const d = makeDeps({ client: () => fakeClient({}, { tags: async () => { throw new QlooError("rate_limit", "slow", { status: 429 }); } }).client });
-    expect((await handleInterest(post({ text: "ramen" }), d)).status).toBe(429);
+    expect((await handleInterest(post({ text: "tapas" }), d)).status).toBe(429);
   });
 });

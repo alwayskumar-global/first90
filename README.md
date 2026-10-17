@@ -51,7 +51,7 @@ GET /v2/insights
   filter.type=urn:entity:place
   filter.location=POINT(-78.6382 35.7796)          # downtown Raleigh
   filter.location.radius=15000
-  filter.tags=urn:tag:category:place:cafe          # repeated for book_store, Korean restaurant, museum
+  filter.tags=urn:tag:category:place:cafe          # repeated for book_store, restaurant (here: the Korean cuisine tag), museum
   signal.interests.tags=urn:tag:category:place:book_store,urn:tag:genre:place:restaurant:korean   # the user's *other* picks
   take=30
 X-Api-Key: <redacted>
@@ -149,7 +149,7 @@ event key; diagnostics routes return `404` in production. Responses carry a Cont
 
 ## Known limitations
 
-- **Raleigh only**, four categories (cafés, bookstores, Korean restaurants, museums & cultural venues). Climbing and other categories had no coverage in the hackathon data.
+- **Raleigh only**, four categories (cafés, bookstores, restaurants, museums & cultural venues). Restaurants follow the cuisine you name ("Japanese food", "Korean food", "Ethiopian food"...): the first cuisine interest sets the cuisine for the plan; with none named, restaurants in general. Climbing and other categories had no coverage in the hackathon data. Cuisine matching relies on Qloo's restaurant-style tags and each place's primary genre; Qloo sometimes tags a place with a cuisine it does not serve, so places whose genre names another cuisine are dropped.
 - Qloo's data is partial: **no price for museums and most bookstores** (shown as unknown, never guessed); hours exist but are not displayed; atmosphere tags are missing for some places (the card says so). Ratings, phone numbers and photos are not shown.
 - "Indie" cannot be verified from Qloo's data; the app never claims a shop is independent (it ranks a few national chains lower when you ask for indie, by name).
 - Curated neighborhood centers are approximate hand-entered coordinates, and their blurbs are illustrative; a searched place uses the geocoder's point. Distances are straight-line from the center, not travel time. Place search is limited to the Raleigh area (a fixed bounding box) and uses a free public geocoder with fair-use limits (cached, throttled); if it or the tile server is down, the flow falls back to the curated areas and an illustration.
@@ -160,7 +160,7 @@ event key; diagnostics routes return `404` in production. Responses carry a Cont
 
 ## Post-hackathon
 
-Ideas deliberately out of scope for this submission (plan §3): more cities and categories; a second restaurant cuisine beyond Korean; apartment/neighborhood
+Ideas deliberately out of scope for this submission (plan §3): more cities and categories; several cuisines in one plan; apartment/neighborhood
 comparison; opening hours and live availability; saving plans to an account or exporting to a calendar; an LLM wording layer (the guard is already in place);
 travel-time based distances; user-to-user or community features.
 

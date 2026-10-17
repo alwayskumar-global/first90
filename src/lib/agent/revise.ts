@@ -1,4 +1,5 @@
-import { CATEGORIES, MIN_RADIUS_METERS, STAGE_LABELS, type CategoryKey } from "@/domain/demo";
+import { categoryLabelFor, categoryNounFor } from "@/domain/cuisine";
+import { MIN_RADIUS_METERS, STAGE_LABELS, type CategoryKey } from "@/domain/demo";
 import type {
   AppliedConstraint,
   Feedback,
@@ -110,7 +111,7 @@ export function deriveConstraint(
         input,
         constraint: {
           kind: "category_penalty",
-          label: `Fewer ${CATEGORIES[item.category].label.toLowerCase()} suggestions`,
+          label: `Fewer ${categoryLabelFor(item.category, input.cuisineTagId).toLowerCase()} suggestions`,
           reason: "not_interested",
           sourceItemId: item.id,
           category: item.category,
@@ -282,7 +283,7 @@ export async function reviseWithPool(args: {
   // Be honest when the replacement can't be verified against the reason given.
   const notes: string[] = revision.limitation ? [revision.limitation] : [];
   if (switchedCategory) {
-    notes.push(`No other ${CATEGORIES[item.category].label.toLowerCase()} met your limits, so a ${CATEGORIES[pick.candidate.category].noun} was suggested instead.`);
+    notes.push(`No other ${categoryLabelFor(item.category, session.plan.input.cuisineTagId).toLowerCase()} met your limits, so a ${categoryNounFor(pick.candidate.category, session.plan.input.cuisineTagId)} was suggested instead.`);
   }
   if (feedback.reason === "too_loud" && quietSignals(pick.candidate).length === 0) {
     notes.push(

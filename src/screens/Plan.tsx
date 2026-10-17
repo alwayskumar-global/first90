@@ -8,7 +8,7 @@ import { Icon } from "@/components/Icon";
 import { Badge, Button, StageNav, STAGES, StateBanner, type StageId } from "@/components/ui";
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { areaText, choicesText, rangeText, unsearchedShort } from "@/lib/flow/summary";
-import { CATEGORY_ICON, CATEGORY_LABEL, ROUTINE_BLURB, connectedInterests, distanceText } from "./placeView";
+import { CATEGORY_ICON, placeBadge, ROUTINE_BLURB, connectedInterests, distanceText } from "./placeView";
 import { ReplaceDialog } from "./ReplaceDialog";
 
 const STAGE_COPY: Record<StageId, { n: number; intro: string; next: StageId | null }> = {
@@ -127,7 +127,7 @@ export function Plan() {
                       <div className={`f90-place${isSaved ? " f90-place--saved" : ""}`}>
                         <div className="f90-place__tile">
                           <span className="f90-place__tile-ico"><Icon name={CATEGORY_ICON[item.category]} size={20} /></span>
-                          {CATEGORY_LABEL[item.category]}
+                          {placeBadge(item.category, session)}
                         </div>
                         <div className="f90-place__body" style={{ minWidth: 0 }}>
                           <div className="f90-place__meta">
@@ -242,7 +242,7 @@ export function Plan() {
                     return c ? (
                       <li key={item.id} style={{ font: "500 14px/1.4 var(--font-sans)", display: "flex", flexDirection: "column" }}>
                         <span>{c.name}</span>
-                        <span style={{ font: "400 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>{CATEGORY_LABEL[item.category]} · {distanceText(c, session)}</span>
+                        <span style={{ font: "400 13px/1.4 var(--font-sans)", color: "var(--text-muted)" }}>{placeBadge(item.category, session)} · {distanceText(c, session)}</span>
                       </li>
                     ) : null;
                   })}

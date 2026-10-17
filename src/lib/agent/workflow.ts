@@ -1,3 +1,4 @@
+import { categoryLabelFor } from "@/domain/cuisine";
 import { CATEGORIES, CATEGORY_KEYS, DEMO_AREA, isInDemoBounds, isNeighborhoodKey, resolveCenter } from "@/domain/demo";
 import {
   STAGE_KEYS,
@@ -105,6 +106,7 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
         center: resolveCenter(input.neighborhoodKey, input.customArea).center,
         queryRadiusMeters: input.radiusMeters,
         ...(queryMaxPriceLevel !== undefined ? { queryMaxPriceLevel } : {}),
+        ...(input.cuisineTagId ? { cuisineTagId: input.cuisineTagId } : {}),
       }),
     (result) => ({
       status: result.failedCategories.length > 0 ? "partial" : "done",
@@ -192,7 +194,7 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
   };
   const notes = [...summary.notes];
   if (pool.failedCategories.length > 0) {
-    notes.push(`Could not load: ${pool.failedCategories.map((key) => CATEGORIES[key].label).join(", ")}. Retry for a fuller plan.`);
+    notes.push(`Could not load: ${pool.failedCategories.map((key) => categoryLabelFor(key, input.cuisineTagId)).join(", ")}. Retry for a fuller plan.`);
   }
   for (const key of input.categories) {
     const stats = selection.byCategory[key];
@@ -206,9 +208,9 @@ export async function buildPlan(deps: WorkflowDeps, rawInput: TasteInput): Promi
     if (stats.priceUnverified > 0) reasons.push(`Qloo has no price for ${stats.priceUnverified}, so the price ceiling can't be verified`);
     if (stats.overPrice > 0) reasons.push(`${stats.overPrice} exceed the price ceiling`);
     if (stats.outsideRadius > 0) reasons.push(`${stats.outsideRadius} are outside the distance limit`);
-    if (stats.offCategory > 0) reasons.push(`${stats.offCategory} were not really ${CATEGORIES[key].label.toLowerCase()}`);
+    if (stats.offCategory > 0) reasons.push(`${stats.offCategory} were not really ${categoryLabelFor(key, input.cuisineTagId).toLowerCase()}`);
     notes.push(
-      `No verified ${CATEGORIES[key].label.toLowerCase()} met your limits${reasons.length ? ` (${reasons.join("; ")})` : ""}.`,
+      `No verified ${categoryLabelFor(key, input.cuisineTagId).toLowerCase()} met your limits${reasons.length ? ` (${reasons.join("; ")})` : ""}.`,
     );
   }
   if (STAGE_KEYS.every((key) => stages[key].length === 0)) {
@@ -256,6 +258,7 @@ export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedb
         center,
         queryRadiusMeters: plan.queryRadiusMeters,
         ...(plan.queryMaxPriceLevel !== undefined ? { queryMaxPriceLevel: plan.queryMaxPriceLevel } : {}),
+        ...(plan.input.cuisineTagId ? { cuisineTagId: plan.input.cuisineTagId } : {}),
       });
       let result = await reviseWithPool({ session, feedback, pool: pool.candidates, wording });
 
@@ -267,6 +270,7 @@ export async function revisePlan(deps: WorkflowDeps, session: PlanSession, feedb
           center,
           queryRadiusMeters: plan.queryRadiusMeters,
           queryMaxPriceLevel: ceiling,
+          ...(plan.input.cuisineTagId ? { cuisineTagId: plan.input.cuisineTagId } : {}),
         });
         const known = new Set(pool.candidates.map((c) => c.qlooEntityId));
         const merged = [...pool.candidates, ...tighter.candidates.filter((c) => !known.has(c.qlooEntityId))];

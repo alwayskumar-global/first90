@@ -9,7 +9,7 @@ import { Badge, Button, STAGES, StateBanner } from "@/components/ui";
 import { UNVERIFIED_NOTICE } from "@/lib/agent/explain";
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { rangeText } from "@/lib/flow/summary";
-import { BASIS_LABEL, CATEGORY_ICON, CATEGORY_LABEL, areaLabelOf, connectedInterests, distanceText, priceText } from "./placeView";
+import { BASIS_LABEL, CATEGORY_ICON, placeBadge, areaLabelOf, connectedInterests, distanceText, priceText } from "./placeView";
 import { ReplaceDialog } from "./ReplaceDialog";
 
 type Support = "supported" | "general" | "unknown";
@@ -28,8 +28,8 @@ function buildReasons(item: PlanItem, candidate: PlaceCandidate, session: PlanSe
 
   reasons.push({
     kind: "Category",
-    name: CATEGORY_LABEL[item.category],
-    text: candidate.primaryGenre ? `Qloo lists it as “${candidate.primaryGenre}”.` : `It appears under ${CATEGORY_LABEL[item.category].toLowerCase()} in our data.`,
+    name: placeBadge(item.category, session),
+    text: candidate.primaryGenre ? `Qloo lists it as “${candidate.primaryGenre}”.` : `It appears under ${placeBadge(item.category, session).toLowerCase()} in our data.`,
     support: "supported",
   });
 
@@ -117,14 +117,14 @@ export function PlaceDetail() {
                   <Icon name={CATEGORY_ICON[item.category]} size={28} />
                 </span>
                 <div>
-                  <div style={{ font: "500 17px/1.3 var(--font-sans)" }}>{CATEGORY_LABEL[item.category]}</div>
+                  <div style={{ font: "500 17px/1.3 var(--font-sans)" }}>{placeBadge(item.category, session)}</div>
                   <p style={{ margin: "4px 0 0", font: "400 14px/1.5 var(--font-sans)", color: "var(--text-secondary)" }}>We don’t show photos of places, only what we can stand behind.</p>
                 </div>
               </div>
 
               <h1 style={{ margin: "clamp(20px,3vw,28px) 0 0", font: "400 clamp(2.125rem,4.8vw,3.25rem)/1.06 var(--font-serif)", letterSpacing: "-.022em", textWrap: "balance" }}>{candidate.name}</h1>
               <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", font: "400 15px/1.4 var(--font-sans)", color: "var(--text-secondary)" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name={CATEGORY_ICON[item.category]} size={16} />{CATEGORY_LABEL[item.category]}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name={CATEGORY_ICON[item.category]} size={16} />{placeBadge(item.category, session)}</span>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="map-pin" size={16} />{distanceText(candidate, session)}</span>
                 {saved ? <Badge tone="verified" icon="bookmark-check">Saved</Badge> : null}
               </div>
@@ -172,7 +172,7 @@ export function PlaceDetail() {
               <h2 id="prac-h" style={{ margin: 0, font: "500 clamp(1.1875rem,2vw,1.375rem)/1.3 var(--font-sans)", letterSpacing: "-.01em" }}>Practical details</h2>
               <dl style={{ margin: "14px 0 0", display: "grid", gridTemplateColumns: "minmax(96px,auto) minmax(0,1fr)", gap: "0 20px", font: "400 15px/1.5 var(--font-sans)" }}>
                 <dt style={th}>Neighborhood</dt><dd style={{ ...td, fontWeight: candidate.neighborhood ? 500 : 400, color: candidate.neighborhood ? undefined : "var(--text-muted)" }}>{candidate.neighborhood ? `${candidate.neighborhood}, Raleigh, NC` : "Not available in our data yet"}</dd>
-                <dt style={th}>Category</dt><dd style={{ ...td, fontWeight: 500 }}>{CATEGORY_LABEL[item.category]}</dd>
+                <dt style={th}>Category</dt><dd style={{ ...td, fontWeight: 500 }}>{placeBadge(item.category, session)}</dd>
                 <dt style={th}>Street address</dt><dd style={{ ...td, color: candidate.address ? undefined : "var(--text-muted)" }}>{candidate.address ?? "Not available in our data yet"}</dd>
                 <dt style={th}>Price level</dt>
                 <dd style={{ ...td, color: price ? undefined : "var(--text-muted)" }}>{price ? <>{price} <span style={{ color: "var(--text-muted)", fontSize: 13 }}>as listed by Qloo</span></> : "Price not available — check current details."}</dd>

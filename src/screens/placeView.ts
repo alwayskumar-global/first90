@@ -1,22 +1,22 @@
-import { CATEGORIES, resolveCenter, type CategoryKey } from "@/domain/demo";
+import { categoryBadgeFor, categoryLabelFor } from "@/domain/cuisine";
+import { resolveCenter, type CategoryKey } from "@/domain/demo";
 import type { ExplanationBasis, PlaceCandidate, PlanItem, PlanSession } from "@/domain/types";
 import type { IconName } from "@/components/Icon";
 import { formatKm } from "@/lib/agent/explain";
 
 export const CATEGORY_ICON: Record<CategoryKey, IconName> = {
-  cafe: "coffee", bookstore: "book-open", korean_restaurant: "utensils", museum: "landmark",
+  cafe: "coffee", bookstore: "book-open", restaurant: "utensils", museum: "landmark",
 };
 
-/** Short category label for badges and tiles. */
-export const CATEGORY_LABEL: Record<CategoryKey, string> = {
-  cafe: "Café", bookstore: "Bookstore", korean_restaurant: "Korean restaurant", museum: "Cultural venue",
-};
+/** Short category label for badges and tiles; restaurants carry the plan's cuisine ("Japanese restaurant"). */
+export const placeBadge = (category: CategoryKey, session: PlanSession): string =>
+  categoryBadgeFor(category, session.plan.input.cuisineTagId);
 
 /** One line under each routine heading. Generic to the kind of place; it makes no claim about a specific place. */
 export const ROUTINE_BLURB: Record<CategoryKey, string> = {
   cafe: "A café you can return to until it feels like yours.",
   bookstore: "A bookstore for browsing, with no plan needed.",
-  korean_restaurant: "A relaxed place to eat that doesn’t take much planning.",
+  restaurant: "A relaxed place to eat that doesn’t take much planning.",
   museum: "A cultural stop for an unhurried afternoon.",
 };
 
@@ -52,4 +52,5 @@ export function connectedInterests(item: PlanItem, candidate: PlaceCandidate, se
   return [...new Set(ids.map(label).filter((v): v is string => !!v))];
 }
 
-export const categoryPlural = (key: CategoryKey) => CATEGORIES[key].label.toLowerCase();
+export const categoryPlural = (key: CategoryKey, session: PlanSession) =>
+  categoryLabelFor(key, session.plan.input.cuisineTagId).toLowerCase();

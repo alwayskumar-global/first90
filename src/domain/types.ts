@@ -32,6 +32,8 @@ export interface TasteInput {
   neighborhoodKey?: string;
   /** CR-007: a searched place inside the demo bounds; takes the place of `neighborhoodKey`. */
   customArea?: CustomArea;
+  /** CR-009: the cuisine for the restaurant category, a Qloo restaurant-style tag. Omitted = restaurants in general. */
+  cuisineTagId?: string;
   /** Hard distance limit in meters. Always explicit: Qloo returns nothing without it. */
   radiusMeters: number;
   categories: CategoryKey[];

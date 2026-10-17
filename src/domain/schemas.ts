@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CUISINE_TAG_PATTERN } from "./cuisine";
 import { CATEGORY_KEYS, DEMO_BOUNDS, NEIGHBORHOOD_KEYS } from "./demo";
 import { FEEDBACK_REASONS, STAGE_KEYS } from "./types";
 import type { Feedback, PlanSession, TasteInput } from "./types";
@@ -31,6 +32,7 @@ export const tasteInputSchema = z.object({
   areaKey: z.string().max(40),
   neighborhoodKey: z.enum(NEIGHBORHOOD_KEYS as [string, ...string[]]).optional(),
   customArea: customAreaSchema.optional(),
+  cuisineTagId: z.string().regex(CUISINE_TAG_PATTERN).optional(),
   radiusMeters: z.number().min(1_000).max(50_000),
   categories: z.array(categoryKey).min(1).max(4),
   maxPriceLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional(),

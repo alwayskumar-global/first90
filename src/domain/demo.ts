@@ -32,7 +32,7 @@ export interface CustomArea {
 export const isInDemoBounds = (lat: number, lon: number): boolean =>
   lat >= DEMO_BOUNDS.minLat && lat <= DEMO_BOUNDS.maxLat && lon >= DEMO_BOUNDS.minLon && lon <= DEMO_BOUNDS.maxLon;
 
-export const CATEGORY_KEYS = ["cafe", "bookstore", "korean_restaurant", "museum"] as const;
+export const CATEGORY_KEYS = ["cafe", "bookstore", "restaurant", "museum"] as const;
 export type CategoryKey = (typeof CATEGORY_KEYS)[number];
 
 export interface CategoryDefinition {
@@ -67,11 +67,12 @@ export const CATEGORIES: Record<CategoryKey, CategoryDefinition> = {
     // CR-004: Qloo lists no price for most Raleigh bookstores, so a price ceiling keeps unpriced ones, flagged.
     pricesAvailable: false,
   },
-  korean_restaurant: {
-    key: "korean_restaurant",
-    label: "Korean restaurants",
-    noun: "Korean restaurant",
-    filterTagId: "urn:tag:genre:place:restaurant:korean",
+  restaurant: {
+    key: "restaurant",
+    label: "Restaurants",
+    noun: "restaurant",
+    // Default filter; a plan with a cuisine (CR-009) replaces it with that cuisine's Qloo tag.
+    filterTagId: "urn:tag:category:place:restaurant",
     pricesAvailable: true,
   },
   museum: {
@@ -94,23 +95,44 @@ export function isCategoryKey(value: string): value is CategoryKey {
 }
 
 /**
- * Built-in aliases from normalized interest phrases to locked demo categories.
- * Avoids a live lookup for the phrases the demo persona uses and makes their
- * resolution deterministic. Anything else goes to Qloo's /v2/tags.
+ * Built-in aliases from normalized interest phrases to a category and the Qloo tag that serves it. Avoids a live
+ * lookup for common phrases and makes their resolution deterministic. Cuisine tags were checked against live
+ * Raleigh results. Anything else goes to Qloo's /v2/tags.
  */
-export const INTEREST_ALIASES: Record<string, CategoryKey> = {
-  "indie bookstore": "bookstore",
-  "independent bookstore": "bookstore",
-  bookstore: "bookstore",
-  "book store": "bookstore",
-  "korean food": "korean_restaurant",
-  "korean restaurant": "korean_restaurant",
-  "korean bbq": "korean_restaurant",
-  "coffee shop": "cafe",
-  coffee: "cafe",
-  cafe: "cafe",
-  museum: "museum",
-  "art museum": "museum",
+export interface InterestAlias {
+  category: CategoryKey;
+  tagId: string;
+}
+const cuisine = (slug: string): InterestAlias => ({ category: "restaurant", tagId: `urn:tag:genre:place:restaurant:${slug}` });
+const own = (category: CategoryKey): InterestAlias => ({ category, tagId: CATEGORIES[category].filterTagId });
+export const INTEREST_ALIASES: Record<string, InterestAlias> = {
+  "indie bookstore": own("bookstore"),
+  "independent bookstore": own("bookstore"),
+  bookstore: own("bookstore"),
+  "book store": own("bookstore"),
+  "coffee shop": own("cafe"),
+  coffee: own("cafe"),
+  cafe: own("cafe"),
+  museum: own("museum"),
+  "art museum": own("museum"),
+  "korean food": cuisine("korean"),
+  "korean restaurant": cuisine("korean"),
+  "korean bbq": cuisine("korean"),
+  "japanese food": cuisine("japanese"),
+  "japanese restaurant": cuisine("japanese"),
+  japanese: cuisine("japanese"),
+  sushi: cuisine("sushi"),
+  ramen: cuisine("ramen"),
+  "chinese food": cuisine("chinese"),
+  "chinese restaurant": cuisine("chinese"),
+  "italian food": cuisine("italian"),
+  "italian restaurant": cuisine("italian"),
+  "mexican food": cuisine("mexican"),
+  "mexican restaurant": cuisine("mexican"),
+  "thai food": cuisine("thai"),
+  "thai restaurant": cuisine("thai"),
+  "indian food": cuisine("indian"),
+  "indian restaurant": cuisine("indian"),
 };
 
 // ------------------------------------------------------------- planner

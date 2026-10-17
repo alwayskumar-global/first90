@@ -160,7 +160,7 @@ describe("buildPlan", () => {
     const { session, trace } = await buildPlan({ client: fake.client }, BASE_INPUT);
     expect(trace.find((step) => step.id === "discover_places")!.status).toBe("partial");
     expect(session.notes.join(" ")).toContain("Could not load: Korean restaurants");
-    expect(itemsOf(session).some((item) => item.category === "korean_restaurant")).toBe(false);
+    expect(itemsOf(session).some((item) => item.category === "restaurant")).toBe(false);
     expect(itemsOf(session).length).toBeGreaterThan(0);
   });
 
@@ -197,7 +197,7 @@ describe("buildPlan", () => {
   });
 
   it("returns a nonempty-notes empty plan (not an error) when nothing qualifies", async () => {
-    const { result } = build(largeRaw(), { ...BASE_INPUT, radiusMeters: 1_000, maxPriceLevel: 1, categories: ["korean_restaurant"] });
+    const { result } = build(largeRaw(), { ...BASE_INPUT, radiusMeters: 1_000, maxPriceLevel: 1, categories: ["restaurant"] });
     const { session } = await result;
     expect(itemsOf(session)).toHaveLength(0);
     expect(session.notes.join(" ")).toContain("No verified places matched your limits");
@@ -245,7 +245,7 @@ describe("buildPlan", () => {
     const b = (await build(largeRaw(), swapped).result).session;
     const count = (s: PlanSession, category: string) => itemsOf(s).filter((i) => i.category === category).length;
     expect(count(b, "museum")).toBeGreaterThanOrEqual(count(a, "museum"));
-    expect(count(b, "korean_restaurant")).toBeLessThanOrEqual(count(a, "korean_restaurant"));
+    expect(count(b, "restaurant")).toBeLessThanOrEqual(count(a, "restaurant"));
     expect(b.signals.map((s) => s.label)).not.toEqual(a.signals.map((s) => s.label));
   });
 });

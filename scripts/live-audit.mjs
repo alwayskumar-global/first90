@@ -22,7 +22,7 @@ if (!key) { console.error("QLOO_API_KEY is required (env or .env.local)"); proce
 const DOWNTOWN = { lat: 35.7796, lon: -78.6382 };
 const input = {
   interests: ["indie bookstores", "Korean food", "coffee shops", "quiet mornings"],
-  areaKey: "raleigh-nc", radiusMeters: 15000, categories: ["cafe", "bookstore", "korean_restaurant", "museum"],
+  areaKey: "raleigh-nc", radiusMeters: 15000, categories: ["cafe", "bookstore", "restaurant", "museum"], cuisineTagId: "urn:tag:genre:place:restaurant:korean",
   atmosphere: "no_preference", preferMornings: false,
 };
 

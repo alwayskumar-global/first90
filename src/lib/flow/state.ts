@@ -1,7 +1,7 @@
-import { CATEGORIES, DEMO_PERSONA, type CustomArea, type NeighborhoodKey, type ScopeKey } from "@/domain/demo";
+import { DEMO_PERSONA, INTEREST_ALIASES, type CustomArea, type InterestAlias, type NeighborhoodKey, type ScopeKey } from "@/domain/demo";
 import { setSaved } from "@/domain/session";
 import type { PlanSession } from "@/domain/types";
-import { anchorFromMatch, anchorFromPreference } from "./labels";
+import { anchorFromPreference, curatedAnchor } from "./labels";
 import type { Anchor, AtmosphereChoice, BudgetChoice, FlowState, RoutineId } from "./types";
 
 export const MAX_ANCHORS = 5;
@@ -45,12 +45,11 @@ const sameInput = (a: string, b: string) => a.trim().toLowerCase() === b.trim().
 const invalidatePlan = (state: FlowState): FlowState => ({ ...state, session: null, previousSession: null, lastChange: null, stage: "week", reviewed: [] });
 
 export function sampleAnchors(): Anchor[] {
-  const tag = (key: keyof typeof CATEGORIES, input: string) =>
-    anchorFromMatch(input, { kind: "tag", id: CATEGORIES[key].filterTagId, name: CATEGORIES[key].label, source: "curated" }, "resolved");
+  const alias = (input: string, key: string) => curatedAnchor(input, INTEREST_ALIASES[key] as InterestAlias);
   return [
-    tag("bookstore", "indie bookstores"),
-    tag("korean_restaurant", "Korean food"),
-    tag("cafe", "coffee shops"),
+    alias("indie bookstores", "indie bookstore"),
+    alias("Korean food", "korean food"),
+    alias("coffee shops", "coffee shop"),
     anchorFromPreference("quiet mornings"),
   ];
 }

@@ -1,3 +1,4 @@
+import { cuisineWords, isCuisineTag } from "@/domain/cuisine";
 import type { CategoryKey } from "@/domain/demo";
 import type { PlaceCandidate } from "@/domain/types";
 
@@ -48,10 +49,15 @@ const RULES: Record<CategoryKey, Rules> = {
     ],
     nameRescue: /\b(books?|bookstore|bookshop)\b/i,
   },
-  korean_restaurant: {
-    allowPrimary: ["korean restaurant", "korean barbecue restaurant"],
-    denyPrimary: ["grocery store", "asian grocery store", "supermarket", "korean grocery store"],
-    nameRescue: /\bkorean\b/i,
+  // Restaurants: the generic rule. A plan with a cuisine adds that cuisine's words (see `restaurantVerdict`).
+  restaurant: {
+    allowPrimary: ["restaurant", "pizzeria", "diner", "bistro", "brasserie", "gastropub", "steakhouse"],
+    allowSuffix: [" restaurant", " steakhouse"],
+    denyPrimary: [
+      "fast food restaurant", "grocery store", "asian grocery store", "supermarket", "market", "convenience store",
+      "hotel", "beer garden", "bar", "pub", "bakery", "dessert shop", "ice cream shop",
+    ],
+    denyGenreTags: ["fast food restaurant"],
   },
   museum: {
     allowPrimary: [
@@ -76,7 +82,36 @@ export interface RelevanceVerdict {
   reason?: string;
 }
 
+/**
+ * Restaurants with a cuisine (CR-009). Qloo's cuisine tags are broad: a Chinese restaurant can carry the Japanese
+ * tag. Keep a place when its own primary genre names the cuisine ("Japanese restaurant", "Sushi restaurant"), or,
+ * weakly, when it is a general Asian/pan-Asian/plain restaurant that Qloo also tags with the cuisine.
+ */
+function restaurantVerdict(candidate: PlaceCandidate, words: string[]): RelevanceVerdict {
+  const generic = assessGeneric(candidate);
+  if (!generic.keep) return generic;
+  const primary = candidate.primaryGenre ? clean(candidate.primaryGenre) : undefined;
+  const genreTags = candidate.genreTags.map(clean);
+  const says = (text: string) => words.some((word) => text.includes(word));
+  if (primary && says(primary)) return { keep: true, strength: "primary" };
+  const loose = !primary || ["restaurant", "asian restaurant", "pan-asian restaurant"].includes(primary);
+  if (loose && genreTags.some(says)) return { keep: true, strength: "name" };
+  if (new RegExp(`\\b(${words.map((w) => w.replace(/[^a-z ]/g, "")).join("|")})\\b`, "i").test(candidate.name)) return { keep: true, strength: "name" };
+  return {
+    keep: false,
+    reason: candidate.primaryGenre ? `primary genre "${candidate.primaryGenre}" is not ${words[0] ?? "this cuisine"}` : "no cuisine evidence in Qloo's genre data",
+  };
+}
+
 export function assessRelevance(candidate: PlaceCandidate): RelevanceVerdict {
+  if (candidate.category === "restaurant") {
+    const cuisineTag = candidate.evidence.filterTagIds.find(isCuisineTag);
+    if (cuisineTag) return restaurantVerdict(candidate, cuisineWords(cuisineTag));
+  }
+  return assessGeneric(candidate);
+}
+
+function assessGeneric(candidate: PlaceCandidate): RelevanceVerdict {
   const rules = RULES[candidate.category];
   const primary = candidate.primaryGenre ? clean(candidate.primaryGenre) : undefined;
   const genreTags = candidate.genreTags.map(clean);
@@ -97,14 +132,6 @@ export function assessRelevance(candidate: PlaceCandidate): RelevanceVerdict {
   }
   if (rules.nameRescue?.test(candidate.name)) return { keep: true, strength: "name" };
 
-  // Korean restaurants: pan-Asian places that Qloo also tags as a Korean restaurant count, weakly.
-  if (
-    candidate.category === "korean_restaurant" &&
-    (primary === "asian restaurant" || primary === "pan-asian restaurant") &&
-    genreTags.includes("korean restaurant")
-  ) {
-    return { keep: true, strength: "name" };
-  }
   return {
     keep: false,
     reason: candidate.primaryGenre

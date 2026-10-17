@@ -23,11 +23,11 @@ describe("resolveInterest", () => {
 
   it("resolves a single exact place-scoped tag", async () => {
     const client = clientWithTags([
-      { id: "urn:tag:genre:place:restaurant:ramen", name: "Ramen", type: "urn:tag:genre:place" },
-      { id: "urn:tag:nearby_attraction:qloo:ramen_street", name: "Ramen Street" },
+      { id: "urn:tag:genre:place:restaurant:tapas", name: "Tapas", type: "urn:tag:genre:place" },
+      { id: "urn:tag:nearby_attraction:qloo:tapas_street", name: "Tapas Street" },
     ]);
-    const result = await resolveInterest(client, "ramen");
-    expect(result).toMatchObject({ status: "resolved", match: { id: "urn:tag:genre:place:restaurant:ramen", source: "qloo" } });
+    const result = await resolveInterest(client, "tapas");
+    expect(result).toMatchObject({ status: "resolved", match: { id: "urn:tag:genre:place:restaurant:tapas", source: "qloo" } });
   });
 
   it("reports ambiguity when several exact place tags exist", async () => {

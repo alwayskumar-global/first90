@@ -1,4 +1,5 @@
-import { CATEGORIES, DEMO_AREA, resolveCenter } from "@/domain/demo";
+import { categoryNounFor, isCuisineTag, mealPhrase } from "@/domain/cuisine";
+import { DEMO_AREA, resolveCenter } from "@/domain/demo";
 import type {
   ExplanationBasis,
   PlaceCandidate,
@@ -87,8 +88,8 @@ function routineFor(candidate: PlaceCandidate, input: TasteInput): string {
         : `Try ${name} as a regular coffee stop`;
     case "bookstore":
       return `Browse ${name} on a slow day`;
-    case "korean_restaurant":
-      return `Try ${name} for a Korean meal`;
+    case "restaurant":
+      return `Try ${name} for ${mealPhrase(candidate.evidence.filterTagIds.find(isCuisineTag))}`;
     case "museum":
       return `Spend an afternoon at ${name}`;
   }
@@ -117,12 +118,12 @@ export async function explainCandidate(
   wording?: WordingAdapter,
 ): Promise<ExplainedItem> {
   void stage; // reserved: stage does not change facts, only the routine ordering in the plan
-  const category = CATEGORIES[candidate.category];
+  const noun = categoryNounFor(candidate.category, candidate.evidence.filterTagIds.find(isCuisineTag));
   const distance = candidate.evidence.distanceMeters;
   const where =
     distance !== undefined
-      ? `${capitalize(category.noun)} about ${formatKm(distance)} from ${resolveCenter(ctx.input.neighborhoodKey, ctx.input.customArea).label}.`
-      : `${capitalize(category.noun)} in ${DEMO_AREA.label}.`;
+      ? `${capitalize(noun)} about ${formatKm(distance)} from ${resolveCenter(ctx.input.neighborhoodKey, ctx.input.customArea).label}.`
+      : `${capitalize(noun)} in ${DEMO_AREA.label}.`;
   const { basis, sentence } = basisFor(candidate, ctx);
   const highlights = highlightsFor(candidate, ctx.input);
   const tagSentence = highlights.length > 0 ? ` Qloo tags it: ${highlights.join(", ")}.` : "";

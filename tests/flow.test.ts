@@ -3,8 +3,8 @@ import { NEIGHBORHOODS, SEARCH_SCOPES } from "@/domain/demo";
 import { allItems, findItem, setSaved } from "@/domain/session";
 import { buildPlan } from "@/lib/agent/workflow";
 import { ApiError, readNdjson } from "@/lib/flow/api";
-import { buildTasteInput, selectCategories } from "@/lib/flow/input";
-import { anchorFromMatch, anchorFromPreference, anchorOwnWords, outcomeFromResolved, tagKindLabel, unsearchedAnchors } from "@/lib/flow/labels";
+import { buildTasteInput, cuisineOf, selectCategories } from "@/lib/flow/input";
+import { anchorFromMatch, anchorFromPreference, anchorOwnWords, extraCuisineAnchors, outcomeFromResolved, tagKindLabel, unsearchedAnchors } from "@/lib/flow/labels";
 import { flowReducer, initialState, MAX_ANCHORS, sampleAnchors } from "@/lib/flow/state";
 import { areaText, choicesText, rangeText, ROUTINE_CARDS, unsearchedNote, unsearchedShort } from "@/lib/flow/summary";
 import type { FlowState } from "@/lib/flow/types";
@@ -19,7 +19,7 @@ describe("TasteInput from the setup answers", () => {
       interests: ["indie bookstores", "Korean food", "coffee shops", "quiet mornings"],
       areaKey: "raleigh-nc",
       radiusMeters: SEARCH_SCOPES.city.radiusMeters,
-      categories: ["cafe", "bookstore", "korean_restaurant", "museum"],
+      categories: ["cafe", "bookstore", "restaurant", "museum"],
       atmosphere: "no_preference",
     });
     expect(input.neighborhoodKey).toBeUndefined();
@@ -52,10 +52,10 @@ describe("TasteInput from the setup answers", () => {
 
   it("maps routines to categories, adds categories the interests name, and defaults to all four", () => {
     const base = { ...sample(), anchors: [anchorOwnWords("zines")] };
-    expect(selectCategories(base)).toEqual(["cafe", "bookstore", "korean_restaurant", "museum"]);
+    expect(selectCategories(base)).toEqual(["cafe", "bookstore", "restaurant", "museum"]);
     const work = flowReducer(base, { type: "toggleRoutine", routine: "work" });
     expect(selectCategories(work)).toEqual(["cafe", "bookstore"]);
-    expect(selectCategories({ ...work, anchors: sampleAnchors() })).toEqual(["cafe", "bookstore", "korean_restaurant"]);
+    expect(selectCategories({ ...work, anchors: sampleAnchors() })).toEqual(["cafe", "bookstore", "restaurant"]);
     const skipped = flowReducer(work, { type: "skip", field: "routines", skipped: true });
     expect(selectCategories(skipped)).toHaveLength(4);
   });
@@ -204,36 +204,67 @@ describe("ambiguous choices the user can tell apart", () => {
 });
 
 describe("interests the demo cannot search (CR-008)", () => {
-  const japanese = anchorFromMatch("Japanese Food", { kind: "tag", id: "urn:tag:genre:place:restaurant:japanese_food", name: "Japanese Food", source: "qloo" }, "confirmed");
+  const library = anchorFromMatch("Library", { kind: "tag", id: "urn:tag:genre:place:library", name: "Library", source: "qloo" }, "confirmed");
+  const garden = anchorFromMatch("Garden", { kind: "tag", id: "urn:tag:category:place:garden", name: "Garden", source: "qloo" }, "resolved");
+  const japanese = anchorFromMatch("Japanese food", { kind: "tag", id: "urn:tag:genre:place:restaurant:japanese", name: "Japanese", source: "curated" }, "resolved");
   const korean = sampleAnchors().find((a) => a.input === "Korean food")!;
   const author = anchorFromMatch("Haruki Murakami", { kind: "entity", id: "00000000-0000-4000-8000-000000000001", name: "Haruki Murakami", type: "urn:entity:author", source: "qloo" }, "resolved");
   const jazz = anchorFromMatch("Jazz", { kind: "tag", id: "urn:tag:genre:music:jazz", name: "Jazz", source: "qloo" }, "resolved");
 
-  it("flags place and cuisine tags outside the four categories, and nothing else", () => {
-    expect(unsearchedAnchors([japanese]).map((a) => a.input)).toEqual(["Japanese Food"]);
-    expect(unsearchedAnchors([korean, author, jazz, anchorFromPreference("quiet mornings"), anchorOwnWords("zzqx")])).toEqual([]);
+  it("flags place tags outside the supported categories, and nothing else", () => {
+    expect(unsearchedAnchors([library]).map((a) => a.input)).toEqual(["Library"]);
+    expect(unsearchedAnchors([korean, japanese, author, jazz, anchorFromPreference("quiet mornings"), anchorOwnWords("zzqx")])).toEqual([]);
     expect(unsearchedAnchors(sampleAnchors())).toEqual([]); // the demo persona is fully searchable
   });
 
   it("explains what the demo covers, honestly, for one or several interests", () => {
-    expect(unsearchedNote([japanese])).toContain("“Japanese Food” isn’t one of this demo’s place types (cafés, bookstores, Korean restaurants, and museums)");
-    expect(unsearchedNote([japanese])).toContain("won’t add suggestions of its own");
-    const ramen = anchorFromMatch("Ramen", { kind: "tag", id: "urn:tag:genre:place:restaurant:ramen", name: "Ramen", source: "qloo" }, "resolved");
-    expect(unsearchedNote([japanese, ramen])).toContain("“Japanese Food”, “Ramen” aren’t");
+    expect(unsearchedNote([library])).toContain("“Library” isn’t one of this demo’s place types (cafés, bookstores, restaurants, and museums)");
+    expect(unsearchedNote([library])).toContain("won’t add suggestions of its own");
+    expect(unsearchedNote([library, garden])).toContain("“Library”, “Garden” aren’t");
     expect(unsearchedNote([korean])).toBeNull();
-    expect(unsearchedShort([japanese])).toBe("Japanese Food: taste signal only. This demo covers cafés, bookstores, Korean restaurants, and museums.");
+    expect(unsearchedShort([library])).toBe("Library: taste signal only. This demo covers cafés, bookstores, restaurants, and museums.");
     expect(unsearchedShort([korean])).toBeNull();
   });
 
-  it("an unsearched interest adds no category of its own", () => {
-    const state: FlowState = { ...sample(), anchors: [japanese] };
-    expect(selectCategories(state)).toEqual(["cafe", "bookstore", "korean_restaurant", "museum"]); // no routine chosen: all four
-    expect(buildTasteInput(state).interests).toEqual(["Japanese Food"]); // still sent as a taste signal
+  it("an unsearched interest adds no category of its own, but is still sent as a taste signal", () => {
+    const state: FlowState = { ...sample(), anchors: [library] };
+    expect(selectCategories(state)).toEqual(["cafe", "bookstore", "restaurant", "museum"]); // no routine chosen: all four
+    expect(buildTasteInput(state).interests).toEqual(["Library"]);
+    expect(buildTasteInput(state).cuisineTagId).toBeUndefined();
   });
 
   it("each routine card says what it covers in this demo", () => {
     expect(Object.fromEntries(ROUTINE_CARDS.map((r) => [r.id, r.covers]))).toEqual({
-      work: "cafés and bookstores", meals: "Korean restaurants", weekend: "museums and bookstores", arts: "museums and cultural venues",
+      work: "cafés and bookstores", meals: "restaurants (your cuisine, if you named one)", weekend: "museums and bookstores", arts: "museums and cultural venues",
     });
+  });
+});
+
+describe("cuisine drives the restaurant category (CR-009)", () => {
+  const cuisine = (input: string, slug: string) =>
+    anchorFromMatch(input, { kind: "tag", id: `urn:tag:genre:place:restaurant:${slug}`, name: input, source: "qloo" }, "resolved");
+
+  it("the persona's 'Korean food' plans Korean restaurants", () => {
+    expect(buildTasteInput(sample()).cuisineTagId).toBe("urn:tag:genre:place:restaurant:korean");
+  });
+
+  it("'Japanese food' plans Japanese restaurants, and a cuisine interest alone adds the restaurant category", () => {
+    const state: FlowState = { ...sample(), anchors: [cuisine("Japanese food", "japanese")], prefs: { ...sample().prefs, routines: ["work"], skipped: { ...sample().prefs.skipped, routines: false } } };
+    expect(buildTasteInput(state).cuisineTagId).toBe("urn:tag:genre:place:restaurant:japanese");
+    expect(selectCategories(state)).toEqual(["cafe", "bookstore", "restaurant"]);
+  });
+
+  it("no cuisine interest means restaurants in general", () => {
+    expect(buildTasteInput({ ...sample(), anchors: [anchorFromPreference("quiet mornings")] }).cuisineTagId).toBeUndefined();
+  });
+
+  it("the first cuisine wins; later ones are said to be unsearched but still rank places", () => {
+    const anchors = [cuisine("Japanese food", "japanese"), cuisine("Korean food", "korean")];
+    expect(cuisineOf(anchors)).toBe("urn:tag:genre:place:restaurant:japanese");
+    expect(extraCuisineAnchors(anchors).map((a) => a.input)).toEqual(["Korean food"]);
+    expect(unsearchedNote(anchors)).toContain("one cuisine at a time (Japanese)");
+    expect(unsearchedNote(anchors)).toContain("“Korean food” isn’t searched");
+    expect(unsearchedShort(anchors)).toContain("One cuisine per plan");
+    expect(unsearchedNote([anchors[0]!])).toBeNull();
   });
 });

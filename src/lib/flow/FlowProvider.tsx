@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer, type Dispatch, type ReactNode } from "react";
 import { flowReducer, initialState, type FlowAction } from "./state";
+import { parseSavedState } from "./storage";
 import type { FlowState } from "./types";
 
 const STORAGE_KEY = "f90.flow.v1";
@@ -15,12 +16,9 @@ const FlowContext = createContext<FlowContextValue | null>(null);
 
 function load(): FlowState | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as FlowState;
-    return parsed && typeof parsed === "object" && parsed.area && parsed.prefs ? { ...parsed, hydrated: true } : null;
+    return parseSavedState(window.localStorage.getItem(STORAGE_KEY));
   } catch {
-    return null; // storage can be blocked or corrupt: start fresh
+    return null; // storage can be blocked: start fresh
   }
 }
 

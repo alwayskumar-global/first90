@@ -144,7 +144,7 @@ describe("feedback and revision", () => {
     const raw = largeRaw();
     raw[KOREAN_TAG] = raw[KOREAN_TAG]!.slice(0, 1); // a single Korean restaurant: used in the plan
     await setup(raw);
-    const korean = items(session).find((i) => i.category === "korean_restaurant")!;
+    const korean = items(session).find((i) => i.category === "restaurant")!;
     const { revision } = await revisePlan({ client }, session, replace(korean.id, "too_expensive"));
     if (revision.addedItemId) expect(revision.limitation ?? "").toContain("was suggested instead");
     else expect(revision.noMatch).toBeDefined();

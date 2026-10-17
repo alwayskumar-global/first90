@@ -28,10 +28,10 @@ describe("off-category noise filter", () => {
     expect(verdict("bookstore", undefined, "Dog-Eared Books").keep).toBe(true);
   });
   it("keeps Korean restaurants; drops groceries; accepts a pan-Asian place Qloo also tags Korean (weakly)", () => {
-    expect(verdict("korean_restaurant", "Korean barbecue restaurant").keep).toBe(true);
-    expect(verdict("korean_restaurant", "Asian grocery store").keep).toBe(false);
-    expect(verdict("korean_restaurant", "Asian restaurant", "bul box", ["Korean restaurant"])).toMatchObject({ keep: true, strength: "name" });
-    expect(verdict("korean_restaurant", "Asian restaurant", "Wok Place", ["Chinese restaurant"]).keep).toBe(false);
+    expect(verdict("restaurant", "Korean barbecue restaurant").keep).toBe(true);
+    expect(verdict("restaurant", "Asian grocery store").keep).toBe(false);
+    expect(verdict("restaurant", "Asian restaurant", "bul box", ["Korean restaurant"])).toMatchObject({ keep: true, strength: "name" });
+    expect(verdict("restaurant", "Asian restaurant", "Wok Place", ["Chinese restaurant"]).keep).toBe(false);
   });
   it("keeps museums and cultural landmarks; drops parks and cinemas", () => {
     for (const genre of ["Art museum", "Children's museum", "Natural history museum", "Historical landmark"]) {
