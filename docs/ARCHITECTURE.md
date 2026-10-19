@@ -34,6 +34,8 @@ src/
   server/              product API handlers (planApi), session signing (HMAC), usage limits + build gate, error mapping, runtime wiring
   app/api/plan         POST build (NDJSON step stream) / revise; app/api/interests POST resolve one interest
   app/api/geocode      GET place search for the Location step (server proxy to Photon, cached, throttled; CR-007)
+  lib/images/          place photos (CR-010): SSRF guard (guard.ts), og:image reader (html.ts), Commons matcher (commons.ts),
+                       verify-then-keep resolver with caches and a time budget (resolver.ts); runs before a session is signed
   lib/geocode/         Photon client + response normalizer (named places inside the Raleigh bounding box only)
   lib/flow/            client state (reducer + localStorage), TasteInput builder, labels, API client
   screens/             Welcome, Location, Interests, Preferences, Building, Plan, PlaceDetail, ReplaceDialog

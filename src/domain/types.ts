@@ -110,7 +110,21 @@ export interface PlaceAtmosphere {
   visitIntent: string[];
 }
 
-export interface PlaceCandidate {
+/** Where a place image came from (CR-010). Shown with the image; never a stock photo. */
+export type ImageSource = "qloo" | "website" | "wikimedia";
+
+/** Optional image fields shared by PlaceCandidate and PlanItem. */
+export interface PlaceImage {
+  /** https URL. On a candidate straight from Qloo it is only claimed; the server checks it before a plan keeps it. */
+  imageUrl?: string;
+  imageSource?: ImageSource;
+  /** Wikimedia Commons only: author and licence line, as Commons states them. */
+  imageCredit?: string;
+  /** Wikimedia Commons only: the file's description page, where its licence is stated. */
+  imageLink?: string;
+}
+
+export interface PlaceCandidate extends PlaceImage {
   /** Stable key: the Qloo entity ID. */
   qlooEntityId: string;
   name: string;
@@ -151,7 +165,7 @@ export const STAGE_KEYS: StageKey[] = ["first_week", "first_month", "months_2_3"
  */
 export type ExplanationBasis = "input_attribution" | "taste_signals" | "category_and_distance";
 
-export interface PlanItem {
+export interface PlanItem extends PlaceImage {
   /** `item:<qlooEntityId>`; stable for the life of the item. */
   id: string;
   stage: StageKey;

@@ -3,6 +3,7 @@ import { ConfigError } from "@/lib/config";
 import { QlooError } from "@/lib/qloo/errors";
 import { setSaved } from "@/domain/session";
 import type { PlanSession } from "@/domain/types";
+import { noImages } from "@/lib/images/resolver";
 import { createGate, createLimits } from "@/server/limits";
 import { handleInterest, handlePlan, type PlanApiDeps } from "@/server/planApi";
 import { clientKey, createRateLimiter } from "@/server/rateLimit";
@@ -15,7 +16,7 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
 
 function makeDeps(overrides: Partial<PlanApiDeps> = {}, env: Record<string, string> = {}, raw: Record<string, unknown[] | Error> = largeRaw()): PlanApiDeps {
   const limits = createLimits({ RATE_LIMIT_BUILDS_PER_MIN: "100", RATE_LIMIT_REVISIONS_PER_MIN: "100", RATE_LIMIT_LOOKUPS_PER_MIN: "100", RATE_LIMIT_GLOBAL_BUILDS_PER_MIN: "1000", RATE_LIMIT_GLOBAL_LOOKUPS_PER_MIN: "1000", ...env });
-  return { client: () => fakeClient(raw).client, limits, sessionSecret: () => SECRET, buildGate: createGate(limits.maxConcurrentBuilds), ...overrides };
+  return { client: () => fakeClient(raw).client, limits, sessionSecret: () => SECRET, buildGate: createGate(limits.maxConcurrentBuilds), images: noImages, ...overrides };
 }
 
 async function ndjson(response: Response) {

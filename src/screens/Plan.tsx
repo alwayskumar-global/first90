@@ -9,6 +9,7 @@ import { Badge, Button, StageNav, STAGES, StateBanner, type StageId } from "@/co
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { areaText, choicesText, rangeText, unsearchedShort } from "@/lib/flow/summary";
 import { CATEGORY_ICON, placeBadge, ROUTINE_BLURB, connectedInterests, distanceText } from "./placeView";
+import { PlaceCardHeader } from "./PlaceImage";
 import { ReplaceDialog } from "./ReplaceDialog";
 
 const STAGE_COPY: Record<StageId, { n: number; intro: string; next: StageId | null }> = {
@@ -125,10 +126,7 @@ export function Plan() {
                       ) : null}
 
                       <div className={`f90-place${isSaved ? " f90-place--saved" : ""}`}>
-                        <div className="f90-place__tile">
-                          <span className="f90-place__tile-ico"><Icon name={CATEGORY_ICON[item.category]} size={20} /></span>
-                          {placeBadge(item.category, session)}
-                        </div>
+                        <PlaceCardHeader item={item} session={session} name={candidate.name} />
                         <div className="f90-place__body" style={{ minWidth: 0 }}>
                           <div className="f90-place__meta">
                             <span><Icon name="map-pin" size={15} />{distanceText(candidate, session)}</span>

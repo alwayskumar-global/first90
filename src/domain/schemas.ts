@@ -77,7 +77,27 @@ const evidence = z.object({
   tagNames: z.array(z.string()),
 });
 
+/** CR-010: https only, no credentials, bounded length. The session signature stops anyone swapping it later. */
+const imageUrl = z
+  .string()
+  .max(600)
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password;
+    } catch {
+      return false;
+    }
+  }, "image URL must be https");
+const imageFields = {
+  imageUrl: imageUrl.optional(),
+  imageSource: z.enum(["qloo", "website", "wikimedia"]).optional(),
+  imageCredit: z.string().max(160).optional(),
+  imageLink: imageUrl.optional(),
+};
+
 const placeCandidate = z.object({
+  ...imageFields,
   qlooEntityId: z.string().min(1),
   name: z.string().min(1),
   category: categoryKey,
@@ -104,6 +124,7 @@ const placeCandidate = z.object({
 });
 
 const planItem = z.object({
+  ...imageFields,
   id: z.string(),
   stage: stageKey,
   qlooEntityId: z.string(),

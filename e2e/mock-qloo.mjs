@@ -15,6 +15,15 @@ const TAG = {
 };
 
 const t = (name, type) => ({ id: `${type}:${name}`, name, type });
+// Synthetic image URLs on Qloo's image host (the browser tests stub that host): most load, some are broken, some are absent.
+const BROKEN_IMAGE = new Set(["mock-c2", "mock-b2", "mock-k3", "mock-m2"]);
+const NO_IMAGE = new Set(["mock-c3", "mock-c5", "mock-b3", "mock-k2", "mock-m4"]);
+const imageProps = (id) =>
+  NO_IMAGE.has(id) ? {} : (() => {
+    const url = `https://images.qloo.com/i/${BROKEN_IMAGE.has(id) ? "mock-broken" : "mock-ok"}-${id}`;
+    return { image: { url }, images: [{ url, type: "urn:image:place:unknown" }] };
+  })();
+
 function entity({ id, name, genre, distance, price, affinity, ambience = [], noise, time = [], website, address }) {
   return {
     entity_id: id,
@@ -22,6 +31,7 @@ function entity({ id, name, genre, distance, price, affinity, ambience = [], noi
     location: { lat: 35.78, lon: -78.64 },
     popularity: 0.5,
     properties: {
+      ...imageProps(id),
       address: address ?? `${id.length} Mock St Raleigh, NC`,
       primary_genre: { id: "g", name: genre, type: "urn:tag:genre:place" },
       ...(price ? { price_level: price } : {}),

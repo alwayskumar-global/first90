@@ -9,6 +9,7 @@ import { Badge, Button, STAGES, StateBanner } from "@/components/ui";
 import { UNVERIFIED_NOTICE } from "@/lib/agent/explain";
 import { useFlow } from "@/lib/flow/FlowProvider";
 import { rangeText } from "@/lib/flow/summary";
+import { PlaceHero } from "./PlaceImage";
 import { BASIS_LABEL, CATEGORY_ICON, placeBadge, areaLabelOf, connectedInterests, distanceText, priceText } from "./placeView";
 import { ReplaceDialog } from "./ReplaceDialog";
 
@@ -112,15 +113,7 @@ export function PlaceDetail() {
                 <span style={{ color: "var(--text-muted)" }}>{stage.label}</span>
               </div>
 
-              <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 18, background: "var(--apricot-50)", border: "1px solid var(--apricot-100)", borderRadius: 20, padding: "clamp(20px,3vw,28px)" }}>
-                <span style={{ flex: "none", width: 64, height: 64, borderRadius: "50%", background: "var(--apricot-100)", color: "var(--apricot-700)", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon name={CATEGORY_ICON[item.category]} size={28} />
-                </span>
-                <div>
-                  <div style={{ font: "500 17px/1.3 var(--font-sans)" }}>{placeBadge(item.category, session)}</div>
-                  <p style={{ margin: "4px 0 0", font: "400 14px/1.5 var(--font-sans)", color: "var(--text-secondary)" }}>We don’t show photos of places, only what we can stand behind.</p>
-                </div>
-              </div>
+              <PlaceHero item={item} session={session} name={candidate.name} />
 
               <h1 style={{ margin: "clamp(20px,3vw,28px) 0 0", font: "400 clamp(2.125rem,4.8vw,3.25rem)/1.06 var(--font-serif)", letterSpacing: "-.022em", textWrap: "balance" }}>{candidate.name}</h1>
               <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 16px", font: "400 15px/1.4 var(--font-sans)", color: "var(--text-secondary)" }}>

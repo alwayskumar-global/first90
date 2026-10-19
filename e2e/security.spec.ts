@@ -134,6 +134,7 @@ test("responses carry a Content Security Policy that allows only this app and th
   expect(csp).toContain("frame-ancestors 'none'");
   expect(csp).toContain("object-src 'none'");
   expect(csp).toContain("connect-src 'self' https://tiles.openfreemap.org");
+  expect(csp).toContain("img-src 'self' data: blob: https:"); // place photos: images only, https only
   expect(csp).not.toMatch(/\*|unsafe-eval|photon|komoot/); // production policy: no wildcard, no eval, no direct geocoder access
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   expect(response.headers()["referrer-policy"]).toBe("strict-origin-when-cross-origin");

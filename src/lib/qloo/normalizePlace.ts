@@ -29,6 +29,18 @@ const asHttpUrl = (value: unknown): string | undefined => {
   }
 };
 
+/** An https URL without credentials; images are shown to the user's browser, so plain http is refused. */
+export const asHttpsUrl = (value: unknown): string | undefined => {
+  const text = asString(value);
+  if (!text || text.length > 600) return undefined;
+  try {
+    const url = new URL(text);
+    return url.protocol === "https:" && !url.username && !url.password ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 function hasContent(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === "string") return value.trim() !== "";
@@ -117,6 +129,8 @@ export function normalizePlace(record: unknown, context: NormalizeContext): Plac
   const ambience = asString(props["ambience_description"]);
   const rating = asNumber(props["business_rating"]);
   const website = asHttpUrl(props["website"]);
+  // CR-010: Qloo's own image URL (`properties.image.url`, or the first of `properties.images`). Claimed here; verified later.
+  const imageUrl = asHttpsUrl((props["image"] as { url?: unknown } | undefined)?.url) ?? asHttpsUrl((props["images"] as { url?: unknown }[] | undefined)?.[0]?.url);
   const phone = asString(props["phone"]);
 
   return {
@@ -135,6 +149,7 @@ export function normalizePlace(record: unknown, context: NormalizeContext): Plac
     ...(priceLevel !== undefined && priceLevel >= 1 && priceLevel <= 4 ? { priceLevel } : {}),
     ...(rating !== undefined ? { businessRating: rating } : {}),
     ...(website ? { website } : {}),
+    ...(imageUrl ? { imageUrl, imageSource: "qloo" as const } : {}),
     ...(phone ? { phone } : {}),
     ...(primaryGenre ? { primaryGenre } : {}),
     genreTags,

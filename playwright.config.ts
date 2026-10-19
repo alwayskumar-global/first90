@@ -15,6 +15,7 @@ const base = {
   SESSION_SECRET: "e2e-session-secret-0123456789",
   QLOO_CACHE_TTL_SECONDS: "0",
   GEOCODER_CACHE_TTL_SECONDS: "0",
+  IMAGE_VERIFY: "off", // no internet in the tests: the browser-side image host is stubbed instead
   DIAGNOSTICS_ENABLED: "",
 };
 const generous = {

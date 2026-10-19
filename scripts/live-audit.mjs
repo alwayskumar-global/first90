@@ -4,6 +4,9 @@
 // 2. repeats the same Qloo request for each category directly against Qloo,
 // 3. checks every recommended place exists in Qloo's response with the SAME name, address, price level, website and
 //    distance, and that no sentence shown for it contains a score, odds, hours or other invented fact.
+// 4. checks place images (CR-010): every image a plan item carries is https, from a known tier (Qloo / the venue site /
+//    Wikimedia), the very URL Qloo returned (tier 1) or the venue page declares (tier 2), and really serves an image;
+//    a place without an image is fine (it keeps the category tile). Prints a coverage table.
 // Prints counts and pass/fail only: no place data, ids or secrets.
 import { readFileSync } from "node:fs";
 
@@ -87,6 +90,55 @@ for (const item of items) {
   }
 }
 if (new Set(items.map((i) => i.qlooEntityId)).size !== items.length) fail("duplicate place in plan");
+
+// ---- images (CR-010)
+const servesImage = async (url) => {
+  try {
+    const r = await fetch(url, { redirect: "follow", headers: { accept: "image/*", "user-agent": "First90LiveAudit/0.1" }, signal: AbortSignal.timeout(8000) });
+    await r.body?.cancel();
+    return r.status === 200 && (r.headers.get("content-type") ?? "").startsWith("image/");
+  } catch { return false; }
+};
+const pageImage = async (website) => {
+  try {
+    const r = await fetch(website, { redirect: "follow", headers: { accept: "text/html", "user-agent": "First90LiveAudit/0.1" }, signal: AbortSignal.timeout(5000) });
+    const html = (await r.text()).slice(0, 256 * 1024);
+    for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+      const name = /(?:property|name)\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1]?.toLowerCase();
+      const content = /content\s*=\s*["']([^"']+)["']/i.exec(tag)?.[1];
+      if (content && ["og:image:secure_url", "og:image", "twitter:image"].includes(name)) return new URL(content.replace(/&amp;/g, "&"), r.url).toString();
+    }
+  } catch {}
+  return undefined;
+};
+const coverage = {};
+for (const item of items) {
+  const c = session.candidates[item.qlooEntityId];
+  const real = returned.get(item.qlooEntityId);
+  const row = (coverage[item.category] ??= { places: 0, qloo: 0, website: 0, wikimedia: 0, tile: 0 });
+  row.places++;
+  if (!item.imageUrl) {
+    row.tile++;
+    if (c.imageUrl) fail(`an unverified image was left on a candidate (${item.category})`);
+    continue;
+  }
+  const where = `(${item.category}, ${item.imageSource})`;
+  let url; try { url = new URL(item.imageUrl); } catch { fail(`image URL is not a URL ${where}`); continue; }
+  if (url.protocol !== "https:" || url.username || url.password) fail(`image URL is not plain https ${where}`);
+  if (!["qloo", "website", "wikimedia"].includes(item.imageSource)) { fail(`unknown image source ${where}`); continue; }
+  row[item.imageSource]++;
+  if (c.imageUrl !== item.imageUrl) fail(`candidate and item disagree on the image ${where}`);
+  const p = real?.properties ?? {};
+  if (item.imageSource === "qloo" && item.imageUrl !== (p.image?.url ?? p.images?.[0]?.url)) fail(`Qloo image URL differs from Qloo's response ${where}`);
+  if (item.imageSource === "website") {
+    if (!item.externalUrl) fail(`website image without a Qloo website ${where}`);
+    else if ((await pageImage(item.externalUrl)) !== item.imageUrl) fail(`website image is not the page's own og:image ${where}`);
+  }
+  if (item.imageSource === "wikimedia" && (url.host !== "upload.wikimedia.org" || !/^https:\/\/commons\.wikimedia\.org\//.test(item.imageLink ?? ""))) fail(`Wikimedia image without a Commons source ${where}`);
+  if (!(await servesImage(item.imageUrl))) fail(`image does not load ${where}`);
+}
+console.log("image coverage (places per category):");
+console.table(coverage);
 console.log(`checked ${checked}/${items.length} places against a fresh Qloo response (name, address, price level, website, distance, tags, wording)`);
 if (failures.length) { console.log(`FAILED (${failures.length}):`); for (const f of failures) console.log(" -", f); process.exit(1); }
 console.log("LIVE AUDIT PASSED");

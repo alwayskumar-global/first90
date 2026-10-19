@@ -5,6 +5,7 @@ import type { QlooClient } from "@/lib/qloo/client";
 import { resolveInterest } from "@/lib/qloo/resolveInterests";
 import { buildPlan, revisePlan, type WorkflowDeps } from "@/lib/agent/workflow";
 import type { StepTrace } from "@/lib/agent/trace";
+import type { ImageResolver } from "@/lib/images/resolver";
 import { describeError, errorResponse } from "./errors";
 import { createGate, type Limits } from "./limits";
 import { clientKey, type RateLimiter } from "./rateLimit";
@@ -18,6 +19,8 @@ export interface PlanApiDeps {
   sessionSecret(): string;
   /** Shared across requests; created once by the runtime. */
   buildGate: ReturnType<typeof createGate>;
+  /** Place images (CR-010): verified before a session is signed. */
+  images: ImageResolver;
 }
 
 const bad = (message: string, kind = "bad_request", status = 400) =>
@@ -88,6 +91,7 @@ export async function handlePlan(request: Request, deps: PlanApiDeps): Promise<R
     }
     try {
       const result = await revisePlan({ client }, session, body.feedback);
+      await deps.images.attach(result.session); // a replacement item gets its image before the session is signed
       return Response.json({ ...result, session: signSession(result.session, secret) });
     } catch (error) {
       return errorResponse(error);
@@ -104,6 +108,7 @@ export async function handlePlan(request: Request, deps: PlanApiDeps): Promise<R
       const workflow: WorkflowDeps = { client, onStep: (step: StepTrace) => send({ type: "step", step }) };
       try {
         const result = await buildPlan(workflow, body.input);
+        await deps.images.attach(result.session);
         send({ type: "result", ...result, session: signSession(result.session, secret) });
       } catch (error) {
         send({ type: "error", ...describeError(error).body });

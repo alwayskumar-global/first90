@@ -17,9 +17,22 @@ export async function stubTiles(page: Page) {
   );
 }
 
-/** `test` with the tile host stubbed for every page. */
+/** Place photos: Qloo's image host is stubbed too. URLs containing "mock-broken" fail; the rest are a tiny valid PNG. */
+const PNG_1X1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==", "base64");
+export const IMAGE_REQUESTS: { url: string; referer: string | undefined }[] = [];
+export async function stubPlaceImages(page: Page) {
+  await page.route("https://images.qloo.com/**", (route) => {
+    const request = route.request();
+    IMAGE_REQUESTS.push({ url: request.url(), referer: request.headers()["referer"] });
+    return request.url().includes("mock-broken")
+      ? route.abort("failed")
+      : route.fulfill({ status: 200, contentType: "image/png", headers: { "access-control-allow-origin": "*" }, body: PNG_1X1 });
+  });
+}
+
+/** `test` with the tile host and the image host stubbed for every page. */
 export const test = base.extend<{ stubbedTiles: void }>({
-  stubbedTiles: [async ({ page }, use) => { await stubTiles(page); await use(); }, { auto: true }],
+  stubbedTiles: [async ({ page }, use) => { await stubTiles(page); await stubPlaceImages(page); await use(); }, { auto: true }],
 });
 
 export const lastQloo = async (request: APIRequestContext) =>
@@ -36,7 +49,7 @@ export interface Session {
   candidates: Record<string, { name: string; address?: string; priceLevel?: number; website?: string; evidence: { distanceMeters?: number } }>;
   notes: string[];
 }
-export interface Item { id: string; qlooEntityId: string; routine: string; why: string; notices: string[]; externalUrl?: string; status: string; category: string }
+export interface Item { id: string; qlooEntityId: string; routine: string; why: string; notices: string[]; externalUrl?: string; status: string; category: string; imageUrl?: string; imageSource?: string }
 
 export async function startSample(page: Page) {
   await page.goto("/");

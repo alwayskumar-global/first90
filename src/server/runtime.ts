@@ -6,6 +6,7 @@ import { createGate, createLimits } from "./limits";
 import { readGeocoderUrl, searchPlaces } from "@/lib/geocode/photon";
 import { cachedSearch, type GeocodeApiDeps } from "./geocodeApi";
 import type { PlanApiDeps } from "./planApi";
+import { createImageResolver } from "@/lib/images/resolver";
 import { readSessionSecret } from "./sessionSigning";
 
 /** Process-wide wiring for the public routes: cached and paced Qloo client, usage limits, session signing. */
@@ -15,6 +16,9 @@ const buildGate = createGate(limits.maxConcurrentBuilds);
 
 const ttlSeconds = Number(process.env.QLOO_CACHE_TTL_SECONDS);
 const cache = createTtlCache({ ttlMs: (Number.isFinite(ttlSeconds) && ttlSeconds >= 0 ? ttlSeconds : 1800) * 1000, maxEntries: 64 });
+
+// IMAGE_VERIFY=off skips the network checks (and tiers 2-3). It exists only so the end-to-end tests need no internet.
+const images = createImageResolver({ verify: process.env.IMAGE_VERIFY !== "off", allowLoopback: process.env.IMAGE_ALLOW_LOOPBACK === "true" });
 
 export const planApiDeps: PlanApiDeps = {
   client() {
@@ -27,6 +31,7 @@ export const planApiDeps: PlanApiDeps = {
   limits,
   sessionSecret: () => readSessionSecret(),
   buildGate,
+  images,
 };
 
 const geocodeTtl = Number(process.env.GEOCODER_CACHE_TTL_SECONDS);

@@ -13,7 +13,8 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${TILES}`,
+  // https: because place photos come from whichever host Qloo or the venue returned (CR-010); images only.
+  `img-src 'self' data: blob: https:`,
   "font-src 'self' data:",
   `connect-src 'self' ${TILES}${isDev ? " ws: wss:" : ""}`,
   "worker-src 'self' blob:",

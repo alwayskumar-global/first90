@@ -20,6 +20,20 @@ export const ROUTINE_BLURB: Record<CategoryKey, string> = {
   museum: "A cultural stop for an unhurried afternoon.",
 };
 
+/** Modest credit shown with a photo: where it came from, never more. */
+export function imageSourceLabel(item: Pick<PlanItem, "imageSource">): string {
+  switch (item.imageSource) {
+    case "qloo":
+      return "Image via Qloo";
+    case "website":
+      return "Image from the venue’s website";
+    case "wikimedia":
+      return "Photo: Wikimedia Commons";
+    default:
+      return "";
+  }
+}
+
 export const BASIS_LABEL: Record<ExplanationBasis, string> = {
   input_attribution: "Based on your picks",
   taste_signals: "Ranked using your picks",
