@@ -37,7 +37,7 @@ export interface EligibilityVerdict {
 }
 
 /**
- * Hard constraints, applied before any ranking (PROJECT_PLAN.md section 4):
+ * Hard constraints, applied before any ranking:
  * exclusions, radius, price ceiling, strict quiet. Never relaxed silently.
  */
 export function checkEligibility(candidate: PlaceCandidate, hard: HardConstraints): EligibilityVerdict {

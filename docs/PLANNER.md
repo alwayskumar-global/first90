@@ -1,6 +1,6 @@
 # Planner and agent workflow (Milestone 2)
 
-Implements PROJECT_PLAN.md sections 4 and 7 (Milestone 2). Code lives in `src/lib/agent/`; Qloo access in `src/lib/qloo/`.
+Describes the plan engine: data-truth rules, selection logic, revision behavior. Code lives in `src/lib/agent/`; Qloo access in `src/lib/qloo/`.
 
 ## Workflow
 

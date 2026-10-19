@@ -77,4 +77,4 @@ src/
 
 ## Not yet built (later milestones)
 
-UI from Kumar's designs (M3); production API routes, usage throttling, signed sessions, deployment (M4).
+UI from the supplied designs; production API routes, usage throttling, signed sessions, deployment (M4).

@@ -2,7 +2,7 @@ import { STAGE_KEYS, type PlanSession } from "./types";
 
 /**
  * Mark an item saved or not. Pure and client-safe: saving needs no Qloo data and
- * never touches any other item (PROJECT_PLAN.md section 4, revision behavior).
+ * never touches any other item (revision behavior).
  */
 export function setSaved(session: PlanSession, itemId: string, saved: boolean): PlanSession {
   const plan = structuredClone(session.plan);

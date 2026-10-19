@@ -5,7 +5,7 @@ import { findOutOfLimit } from "./constraints";
 import { PRICE_UNKNOWN_NOTICE, UNVERIFIED_NOTICE } from "./explain";
 
 /**
- * Handwritten acceptance rubric (PROJECT_PLAN.md sections 7 and 8): factual
+ * Handwritten acceptance rubric: factual
  * grounding, plan diversity and constraint adherence. Pure, so the same checks
  * run in unit tests and against live Qloo data.
  */

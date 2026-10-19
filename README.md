@@ -134,12 +134,12 @@ Browser (React, no accounts; answers + plan kept in localStorage)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PLANNER.md](docs/PLANNER.md) (scoring formula, constraints, revision table).
 
-**Map and place search (CR-007).** The Location step shows a real map ([MapLibre GL](https://maplibre.org) with free [OpenFreeMap](https://openfreemap.org) tiles, no key) with a pin
+**Map and place search.** The Location step shows a real map ([MapLibre GL](https://maplibre.org) with free [OpenFreeMap](https://openfreemap.org) tiles, no key) with a pin
 and a circle for the distance limit. Typing in the search box finds places in the Raleigh area through [Photon](https://photon.komoot.io) (OpenStreetMap data). A searched place becomes
 the search center for the plan, exactly like one of the curated neighborhoods; the curated list stays selectable and is the fallback when search or the map is unavailable.
 Qloo supplies neither map tiles nor geocoding; it still supplies every place in the plan.
 
-**Place photos (CR-010).** After a plan is built (and after each revision), the server checks one image per place, in this order, and keeps only an image it saw answer as a real picture (`image/*`, under 5 MB, within 2 s): 1) the image URL Qloo returned (`properties.image.url`); 2) the page preview image (`og:image` / `twitter:image`) of the venue website Qloo returned, or for museums a Wikimedia Commons file within 150 m whose title or description names the venue; 3) nothing. The only URLs the server ever fetches are ones Qloo returned (or an image found on that page): http(s) only, ports 80/443, no credentials, never a loopback/private/link-local address (checked on every redirect and against DNS), HTML read capped at 256 KB, 1.5 s timeouts, results cached in memory. The chosen URL is part of the HMAC-signed session, so it cannot be swapped. In the browser the photo is a plain `<img loading="lazy" referrerpolicy="no-referrer">`; if it fails to load, the card falls back to the tile, so a broken-image icon never shows. The Content Security Policy allows images from any `https:` host for this reason.
+**Place photos.** After a plan is built (and after each revision), the server checks one image per place, in this order, and keeps only an image it saw answer as a real picture (`image/*`, under 5 MB, within 2 s): 1) the image URL Qloo returned (`properties.image.url`); 2) the page preview image (`og:image` / `twitter:image`) of the venue website Qloo returned, or for museums a Wikimedia Commons file within 150 m whose title or description names the venue; 3) nothing. The only URLs the server ever fetches are ones Qloo returned (or an image found on that page): http(s) only, ports 80/443, no credentials, never a loopback/private/link-local address (checked on every redirect and against DNS), HTML read capped at 256 KB, 1.5 s timeouts, results cached in memory. The chosen URL is part of the HMAC-signed session, so it cannot be swapped. In the browser the photo is a plain `<img loading="lazy" referrerpolicy="no-referrer">`; if it fails to load, the card falls back to the tile, so a broken-image icon never shows. The Content Security Policy allows images from any `https:` host for this reason.
 
 **Privacy:** place search is proxied by our server, so the browser never sends what you type, or your address, to the geocoder; the server forwards only the query text and the
 fixed Raleigh bounding box, caches answers in memory, and stores nothing. The map tiles and the place photos are the third parties your browser contacts directly (tile requests to `tiles.openfreemap.org`
@@ -162,7 +162,7 @@ event key; diagnostics routes return `404` in production. Responses carry a Cont
 
 ## Post-hackathon
 
-Ideas deliberately out of scope for this submission (plan §3): more cities and categories; several cuisines in one plan; apartment/neighborhood
+Ideas deliberately out of scope for this submission: more cities and categories; several cuisines in one plan; apartment/neighborhood
 comparison; opening hours and live availability; saving plans to an account or exporting to a calendar; an LLM wording layer (the guard is already in place);
 travel-time based distances; user-to-user or community features.
 

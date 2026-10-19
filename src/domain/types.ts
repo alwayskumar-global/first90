@@ -1,5 +1,5 @@
 /**
- * Domain contracts (PROJECT_PLAN.md section 6). Milestone 1 implements the
+ * Domain contracts. Milestone 1 implements the
  * input/candidate side (TasteInput, ResolvedInterest, PlaceCandidate, Evidence).
  * Plan, PlanItem, Feedback and PlanRevision are declared here so the Milestone 2
  * planner builds against reviewed interfaces; nothing constructs them yet.
