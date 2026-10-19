@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { allItems, buildFromInterests, expect, IMAGE_REQUESTS, resetMock, setMode, stageButton, startSample, test, type Session } from "./helpers";
+import { allItems, buildFromInterests, expect, IMAGE_REQUESTS, PNG_1X1, resetMock, setMode, stageButton, startSample, test, type Session } from "./helpers";
 
 // Mock places: c1 has a working image, c2's image URL fails to load, c3 has no image at all.
 const CAFES = ["mock-c1", "mock-c2", "mock-c3"];
@@ -147,4 +147,54 @@ test("photos fit the screen: no horizontal scroll and the image stays inside its
   const cardBox = await ok.boundingBox();
   expect(box && cardBox && box.width <= cardBox.width + 1).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+});
+
+const C1_IMAGE = "https://images.qloo.com/i/mock-ok-mock-c1";
+
+test("while a photo loads the card shows a placeholder with its category chip, never an empty box, then the photo", async ({ page, request }) => {
+  await page.route(C1_IMAGE, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2_500)); // a slow host
+    await route.fulfill({ status: 200, contentType: "image/png", body: PNG_1X1 });
+  });
+  await buildCafePlan(page, request);
+  const ok = await card(page, NAMES.ok);
+  const frame = ok.locator(".f90-place__photo");
+  await expect(frame).toHaveAttribute("data-loaded", "false");
+  await expect(frame.locator(".f90-place__photo-ph")).toBeVisible(); // placeholder with the category icon
+  await expect(frame.locator(".f90-place__photo-cat")).toBeVisible(); // and the category chip
+  await expect(frame.locator(".f90-place__photo-src")).toHaveCount(0); // no credit for a photo that is not showing yet
+  await expect(frame).toHaveAttribute("data-loaded", "true", { timeout: 15_000 });
+  await expect(frame.locator(".f90-place__photo-ph")).toHaveCount(0);
+  await expect(frame.locator(".f90-place__photo-src")).toHaveText("Image via Qloo");
+  await expect(ok.locator(".f90-place__tile")).toHaveCount(0); // a slow photo is not mistaken for a failed one
+});
+
+test("a photo that never answers falls back to the category tile after about 8 seconds", async ({ page, request }) => {
+  await page.route(C1_IMAGE, () => new Promise<void>(() => undefined)); // the host never responds: no load, no error
+  await buildCafePlan(page, request);
+  const hung = await card(page, NAMES.ok);
+  await hung.scrollIntoViewIfNeeded();
+  const started = Date.now();
+  await expect(hung.locator(".f90-place__photo-ph")).toBeVisible(); // placeholder while it waits
+  await expect(hung.locator(".f90-place__tile")).toBeVisible({ timeout: 20_000 });
+  const waited = Date.now() - started;
+  expect(waited).toBeGreaterThan(6_000); // it did wait for the photo...
+  expect(waited).toBeLessThan(16_000); // ...but not forever
+  await expect(hung.locator("img")).toHaveCount(0);
+  await expect(hung.locator(".f90-place__photo")).toHaveCount(0);
+  // the other cards are untouched
+  const other = await card(page, NAMES.broken);
+  await expect(other.locator(".f90-place__tile")).toBeVisible();
+});
+
+test("the detail photo also falls back when it never answers", async ({ page, request }) => {
+  await page.route(C1_IMAGE, () => new Promise<void>(() => undefined)); // registered first, so the plan card and the detail page both hang
+  await buildCafePlan(page, request);
+  const article = await card(page, NAMES.ok);
+  await article.getByRole("button", { name: /^View details for / }).click();
+  await page.getByRole("button", { name: /^See full details for / }).click();
+  await expect(page).toHaveURL(/\/plan\/item/);
+  await expect(page.locator(".f90-place__photo--hero")).toBeVisible(); // placeholder while it waits
+  await expect(page.getByText("We only show a photo when a source provides one we can verify.")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".f90-place__photo--hero")).toHaveCount(0);
 });

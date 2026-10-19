@@ -18,7 +18,7 @@ export async function stubTiles(page: Page) {
 }
 
 /** Place photos: Qloo's image host is stubbed too. URLs containing "mock-broken" fail; the rest are a tiny valid PNG. */
-const PNG_1X1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==", "base64");
+export const PNG_1X1 = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==", "base64");
 export const IMAGE_REQUESTS: { url: string; referer: string | undefined }[] = [];
 export async function stubPlaceImages(page: Page) {
   await page.route("https://images.qloo.com/**", (route) => {
